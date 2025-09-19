@@ -1,0 +1,514 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+#include <cmath> // Add this for std::fabs
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Wukong Leg Model"
+
+// Toe control structure for a single toe
+struct ToeControl {
+    float baseRot; // base joint (metatarsophalangeal)
+    float midRot;  // middle joint (proximal interphalangeal)
+    float tipRot;  // tip joint (distal interphalangeal)
+};
+
+// Leg control structure for Monkey King
+struct LegControl {
+    // Hip joint
+    float hipRotX, hipRotY, hipRotZ;
+    // Knee joint
+    float kneeRot;
+    // Ankle joint
+    float ankleRotX, ankleRotY, ankleRotZ;
+    // Foot arch
+    float footArchRot;
+    // Toe joint (for all toes together, legacy)
+    float toeRot;
+    // Individual toes (big toe to pinky)
+    ToeControl toes[5];
+};
+
+LegControl leftLeg = { 0, 0, 0, 0, 0, 0, 0, 0, 0, { {0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0} } };
+LegControl rightLeg = { 0, 0, 0, 0, 0, 0, 0, 0, 0, { {0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0} } };
+float animationTime = 0.0f;
+float animationSpeed = 0.005f;
+bool walkingEnabled = false;
+int selectedLeg = 0; // 0=left leg, 1=right leg
+int selectedJoint = 0;
+float rotationSpeed = 2.0f;
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam)
+        {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            break;
+        
+        // Switch between legs
+        case VK_TAB:
+            selectedLeg = (selectedLeg + 1) % 2;
+            break;
+
+        // Joint selection
+        case '1': selectedJoint = 0; break; // Hip X
+        case '2': selectedJoint = 1; break; // Hip Y
+        case '3': selectedJoint = 2; break; // Hip Z
+        case '4': selectedJoint = 3; break; // Knee
+        case '5': selectedJoint = 4; break; // Ankle X
+        case '6': selectedJoint = 5; break; // Ankle Y
+        case '7': selectedJoint = 6; break; // Ankle Z
+        case '8': selectedJoint = 7; break; // Foot arch
+        case '9': selectedJoint = 8; break; // Toe
+
+        // Walking animation toggle
+        case 'W':
+            walkingEnabled = !walkingEnabled;
+            break;
+
+        // Reset pose
+        case 'R':
+            leftLeg = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            rightLeg = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            break;
+
+        // Rotation controls
+        case VK_LEFT:
+        case 'A':
+            {
+                LegControl* currentLeg = (selectedLeg == 0) ? &leftLeg : &rightLeg;
+                switch (selectedJoint)
+                {
+                case 0: currentLeg->hipRotX -= rotationSpeed; break;
+                case 1: currentLeg->hipRotY -= rotationSpeed; break;
+                case 2: currentLeg->hipRotZ -= rotationSpeed; break;
+                case 3: currentLeg->kneeRot -= rotationSpeed; break;
+                case 4: currentLeg->ankleRotX -= rotationSpeed; break;
+                case 5: currentLeg->ankleRotY -= rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ -= rotationSpeed; break;
+                case 7: currentLeg->footArchRot -= rotationSpeed; break;
+                case 8: currentLeg->toeRot -= rotationSpeed; break;
+                }
+            }
+            break;
+
+        case VK_RIGHT:
+        case 'D':
+            {
+                LegControl* currentLeg = (selectedLeg == 0) ? &leftLeg : &rightLeg;
+                switch (selectedJoint)
+                {
+                case 0: currentLeg->hipRotX += rotationSpeed; break;
+                case 1: currentLeg->hipRotY += rotationSpeed; break;
+                case 2: currentLeg->hipRotZ += rotationSpeed; break;
+                case 3: currentLeg->kneeRot += rotationSpeed; break;
+                case 4: currentLeg->ankleRotX += rotationSpeed; break;
+                case 5: currentLeg->ankleRotY += rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ += rotationSpeed; break;
+                case 7: currentLeg->footArchRot += rotationSpeed; break;
+                case 8: currentLeg->toeRot += rotationSpeed; break;
+                }
+            }
+            break;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc)
+{
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+    pfd.cAlphaBits = 8;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+
+    pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void drawCube(float width, float height, float depth)
+{
+    float w = width / 2;
+    float h = height / 2;
+    float d = depth / 2;
+
+    glBegin(GL_QUADS);
+    // Front face
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(-w, -h, d); glVertex3f(w, -h, d); glVertex3f(w, h, d); glVertex3f(-w, h, d);
+    // Back face
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(-w, h, -d); glVertex3f(w, h, -d); glVertex3f(w, -h, -d);
+    // Left face
+    glNormal3f(-1.0f, 0.0f, 0.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(-w, -h, d); glVertex3f(-w, h, d); glVertex3f(-w, h, -d);
+    // Right face
+    glNormal3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(w, -h, -d); glVertex3f(w, h, -d); glVertex3f(w, h, d); glVertex3f(w, -h, d);
+    // Top face
+    glNormal3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(-w, h, -d); glVertex3f(-w, h, d); glVertex3f(w, h, d); glVertex3f(w, h, -d);
+    // Bottom face
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(w, -h, -d); glVertex3f(w, -h, d); glVertex3f(-w, -h, d);
+    glEnd();
+}
+
+void drawCylinder(float radius, float height, int segments = 16)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluCylinder(quad, radius, radius, height, segments, 1);
+    gluDeleteQuadric(quad);
+}
+
+void drawSphere(float radius, int segments = 16)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluSphere(quad, radius, segments, segments);
+    gluDeleteQuadric(quad);
+}
+
+// Draw a tapered cylinder (for muscle effect)
+void drawTaperedCylinder(float baseRadius, float topRadius, float height, int segments = 16) {
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluCylinder(quad, baseRadius, topRadius, height, segments, 1);
+    gluDeleteQuadric(quad);
+}
+
+// Draw a single toe (3 segments), for standing pose: only toenail visible above floor
+void drawToe(const ToeControl& toe, float length, float thickness) {
+    glPushMatrix();
+    // For standing, all joints are nearly straight
+    float baseRot = 0.0f; // toe.baseRot; // override for standing
+    float midRot = 0.0f; // toe.midRot;
+    float tipRot = 0.0f; // toe.tipRot;
+    // Lower the toe so only the tip is visible above the floor
+    glTranslatef(0.0f, -length * 0.45f - length * 0.35f - length * 0.1f, 0.0f);
+    // Base segment (mostly hidden in foot)
+    glRotatef(baseRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.95f, 0.8f, 0.6f); // Skin color
+    drawCylinder(thickness, length * 0.45f);
+    glTranslatef(0.0f, 0.0f, length * 0.45f);
+    // Middle segment (also hidden)
+    glRotatef(midRot, 1.0f, 0.0f, 0.0f);
+    drawCylinder(thickness * 0.85f, length * 0.35f);
+    glTranslatef(0.0f, 0.0f, length * 0.35f);
+    // Tip segment (toenail, only this is visible)
+    glRotatef(tipRot, 1.0f, 0.0f, 0.0f);
+    drawCylinder(thickness * 0.7f, length * 0.2f);
+    glTranslatef(0.0f, 0.0f, length * 0.2f);
+    // Toenail (white tip, visible above floor)
+    glColor3f(1.0f, 0.98f, 0.9f);
+    drawSphere(thickness * 0.8f);
+    glPopMatrix();
+}
+
+// Draw all five toes, flush with the ball/sole, only toenail visible
+void drawToes(const ToeControl toes[5]) {
+    // Big toe to pinky, spread across the front of the foot
+    static const float offsets[5] = { -0.045f, -0.022f, 0.0f, 0.022f, 0.045f };
+    static const float lengths[5] = { 0.11f, 0.09f, 0.085f, 0.075f, 0.065f };
+    static const float thickness[5] = { 0.022f, 0.018f, 0.016f, 0.014f, 0.012f };
+    for (int i = 0; i < 5; ++i) {
+        glPushMatrix();
+        // Place the base of the toe flush with the ball/sole, at floor level
+        glTranslatef(offsets[i], -0.027f, 0.06f); // Lowered so only tip is visible
+        drawToe(toes[i], lengths[i], thickness[i]);
+        glPopMatrix();
+    }
+}
+
+// Draw armored foot for Wukong (with visible toes)
+void drawFoot(float archRot, float toeRot, const ToeControl toes[5])
+{
+    glPushMatrix();
+    // 1. Heel (bulge at the back)
+    glPushMatrix();
+    glTranslatef(0.0f, -0.025f, -0.07f); // Move back and down
+    glScalef(1.0f, 1.2f, 1.0f);
+    glColor3f(0.93f, 0.75f, 0.55f); // Skin
+    drawSphere(0.035f);
+    glPopMatrix();
+
+    // 2. Sole (flat part, stands on floor)
+    glPushMatrix();
+    glTranslatef(0.0f, -0.035f, 0.0f); // Lower to floor
+    glColor3f(0.93f, 0.75f, 0.55f); // Skin
+    drawCube(0.13f, 0.015f, 0.19f); // Flat, thin, covers heel to ball
+    glPopMatrix();
+
+    // 3. Arch (slight curve up from heel to ball)
+    glPushMatrix();
+    glTranslatef(0.0f, -0.01f, 0.03f);
+    glRotatef(archRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.93f, 0.75f, 0.55f);
+    drawTaperedCylinder(0.035f, 0.045f, 0.08f); // Slight arch
+    glPopMatrix();
+
+    // 4. Ball of foot (bulge before toes)
+    glPushMatrix();
+    glTranslatef(0.0f, -0.01f, 0.09f);
+    glScalef(1.1f, 1.0f, 1.2f);
+    glColor3f(0.96f, 0.8f, 0.6f);
+    drawSphere(0.045f);
+    glPopMatrix();
+
+    // 5. Armor overlay (optional, covers top)
+    glPushMatrix();
+    glTranslatef(0.0f, 0.01f, 0.03f);
+    glColor3f(0.7f, 0.7f, 0.7f);  // Metallic color for armor
+    drawCube(0.14f, 0.025f, 0.13f);
+    glPopMatrix();
+    // Gold trim
+    glPushMatrix();
+    glTranslatef(0.0f, 0.02f, 0.09f);
+    glColor3f(0.8f, 0.7f, 0.2f);
+    drawCube(0.15f, 0.01f, 0.08f);
+    glPopMatrix();
+
+    // 6. Toes (connected to ball, standing on floor)
+    glPushMatrix();
+    glTranslatef(0.0f, -0.012f, 0.14f); // Attach to ball, at floor level
+    drawToes(toes);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Draw Wukong's leg with muscle and armor
+void drawLeg(const LegControl& leg, bool isRight = false)
+{
+    glPushMatrix();
+
+    // Mirror for right leg
+    if (isRight) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Hip joint rotations
+    glRotatef(leg.hipRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(leg.hipRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(leg.hipRotZ, 0.0f, 0.0f, 1.0f);
+
+    // --- Thigh (muscular upper leg) ---
+    // Main muscle mass (tapered cylinder)
+    glColor3f(0.93f, 0.75f, 0.55f); // Skin tone
+    drawTaperedCylinder(0.10f, 0.075f, 0.38f); // Thicker at top, tapers down
+    // Muscle bulge (sphere)
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.18f);
+    glScalef(1.1f, 1.1f, 1.3f);
+    glColor3f(0.96f, 0.8f, 0.6f);
+    drawSphere(0.07f);
+    glPopMatrix();
+    // Armor overlay (metallic, slightly smaller)
+    glColor3f(0.7f, 0.7f, 0.7f);
+    drawTaperedCylinder(0.085f, 0.065f, 0.38f);
+    // Decorative armor plate
+    glPushMatrix();
+    glRotatef(90, 0.0f, 1.0f, 0.0f);
+    glColor3f(0.8f, 0.7f, 0.2f);
+    glTranslatef(0.0f, 0.0f, 0.09f);
+    drawCube(0.2f, 0.15f, 0.02f);
+    glPopMatrix();
+
+    // --- Knee joint ---
+    glTranslatef(0.0f, 0.0f, 0.38f);
+    glColor3f(0.93f, 0.75f, 0.55f); // Skin
+    drawSphere(0.07f); // Muscle knee
+    glColor3f(0.75f, 0.65f, 0.2f); // Golden knee armor
+    drawSphere(0.09f); // Armor overlay
+
+    // Knee rotation
+    glRotatef(leg.kneeRot, 1.0f, 0.0f, 0.0f);
+
+    // --- Calf (muscular lower leg) ---
+    // Main muscle mass (tapered)
+    glColor3f(0.93f, 0.75f, 0.55f);
+    drawTaperedCylinder(0.07f, 0.055f, 0.32f);
+    // Calf bulge
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.16f);
+    glScalef(1.0f, 1.1f, 1.3f);
+    glColor3f(0.96f, 0.8f, 0.6f);
+    drawSphere(0.05f);
+    glPopMatrix();
+    // Armor overlay
+    glColor3f(0.7f, 0.7f, 0.7f);
+    drawTaperedCylinder(0.06f, 0.045f, 0.32f);
+
+    // --- Ankle joint ---
+    glTranslatef(0.0f, 0.0f, 0.32f);
+    glColor3f(0.93f, 0.75f, 0.55f); // Skin
+    drawSphere(0.045f);
+    glColor3f(0.75f, 0.65f, 0.2f); // Golden ankle armor
+    drawSphere(0.06f);
+
+    // Ankle rotations
+    glRotatef(leg.ankleRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(leg.ankleRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(leg.ankleRotZ, 0.0f, 0.0f, 1.0f);
+
+    // Draw the armored foot with toes
+    drawFoot(leg.footArchRot, leg.toeRot, leg.toes);
+
+    glPopMatrix();
+}
+
+void updateWalkingAnimation()
+{
+    if (!walkingEnabled) return;
+    
+    animationTime += animationSpeed;
+    float cycle = sin(animationTime * 3.0f);
+    float oppositeCycle = sin(animationTime * 3.0f + 3.14159f);
+
+    // Left leg animation
+    leftLeg.hipRotX = cycle * 45.0f;  // Forward/backward swing
+    leftLeg.kneeRot = std::fabs(cycle) * 60.0f;  // Knee bending
+    leftLeg.ankleRotX = -cycle * 15.0f;  // Ankle adjustment
+    leftLeg.footArchRot = -cycle * 10.0f;  // Foot flexing
+    leftLeg.toeRot = -cycle * 15.0f;  // Toe movement
+
+    // Right leg animation (opposite phase)
+    rightLeg.hipRotX = oppositeCycle * 45.0f;
+    rightLeg.kneeRot = std::fabs(oppositeCycle) * 60.0f;
+    rightLeg.ankleRotX = -oppositeCycle * 15.0f;
+    rightLeg.footArchRot = -oppositeCycle * 10.0f;
+    rightLeg.toeRot = -oppositeCycle * 15.0f;
+}
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    // Lighting setup
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    GLfloat lightPos[] = { 2.0f, 2.0f, 2.0f, 1.0f };
+    GLfloat lightAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+    GLfloat lightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat lightSpecular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glTranslatef(0.0f, 0.0f, -3.0f);
+    glRotatef(-90, 1.0f, 0.0f, 0.0f);  // Rotate to show legs properly
+
+    // Draw left leg
+    glPushMatrix();
+    glTranslatef(-0.3f, 0.0f, 0.0f);
+    if (selectedLeg == 0) {
+        glColor3f(1.0f, 0.8f, 0.8f);  // Highlight if selected
+    }
+    drawLeg(leftLeg, false);
+    glPopMatrix();
+
+    // Draw right leg
+    glPushMatrix();
+    glTranslatef(0.3f, 0.0f, 0.0f);
+    if (selectedLeg == 1) {
+        glColor3f(1.0f, 0.8f, 0.8f);  // Highlight if selected
+    }
+    drawLeg(rightLeg, true);
+    glPopMatrix();
+
+    glDisable(GL_LIGHTING);
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    wglMakeCurrent(hdc, hglrc);
+
+    ShowWindow(hWnd, nCmdShow);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45, 800.0 / 600.0, 0.1, 100.0);
+
+    glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        updateWalkingAnimation();
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return true;
+}

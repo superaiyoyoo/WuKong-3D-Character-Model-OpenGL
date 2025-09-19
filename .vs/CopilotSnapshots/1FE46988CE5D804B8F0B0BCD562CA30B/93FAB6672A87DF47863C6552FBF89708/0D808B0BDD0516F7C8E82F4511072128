@@ -1,0 +1,514 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "3D Wukong Leg Model with Toes"
+
+// Leg control structure
+struct LegControl {
+    // Hip joint
+    float hipRotX, hipRotY, hipRotZ;
+    // Knee joint
+    float kneeRot;
+    // Ankle joint
+    float ankleRotX, ankleRotY, ankleRotZ;
+    
+    // Monkey toe controls (4 toes + thumb-like big toe)
+    // Big toe (opposable, like thumb)
+    float bigToeBase, bigToeMid, bigToeTip;
+    // Second toe
+    float secondToeBase, secondToeMid, secondToeTip;
+    // Middle toe
+    float middleToeBase, middleToeMid, middleToeTip;
+    // Fourth toe
+    float fourthToeBase, fourthToeMid, fourthToeTip;
+    // Little toe
+    float littleToeBase, littleToeMid, littleToeTip;
+};
+
+LegControl leftLeg = { 0 };
+LegControl rightLeg = { 0 };
+
+int selectedPart = 0; // 0=left leg, 1=right leg
+int selectedJoint = 0; // Which joint to control
+float rotationSpeed = 2.0f;
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    case WM_KEYDOWN:
+    {
+        switch (wParam)
+        {
+        // Part selection
+        case VK_TAB:
+            selectedPart = (selectedPart + 1) % 2; // Cycle through parts: left leg, right leg
+            selectedJoint = 0; // Reset joint selection
+            break;
+
+        // Joint selection (1-9 keys)
+        case '1': selectedJoint = 0; break;
+        case '2': selectedJoint = 1; break;
+        case '3': selectedJoint = 2; break;
+        case '4': selectedJoint = 3; break;
+        case '5': selectedJoint = 4; break;
+        case '6': selectedJoint = 5; break;
+        case '7': selectedJoint = 6; break;
+        case '8': selectedJoint = 7; break;
+        case '9': selectedJoint = 8; break;
+        case '0': selectedJoint = 9; break;
+        case VK_OEM_MINUS: selectedJoint = 10; break;
+        case VK_OEM_PLUS: selectedJoint = 11; break;
+
+        // Rotation controls
+        case VK_LEFT:
+        case 'A':
+            if (selectedPart == 0) { // Left leg
+                LegControl* currentLeg = &leftLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX -= rotationSpeed; break;
+                case 1: currentLeg->hipRotY -= rotationSpeed; break;
+                case 2: currentLeg->hipRotZ -= rotationSpeed; break;
+                case 3: currentLeg->kneeRot -= rotationSpeed; break;
+                case 4: currentLeg->ankleRotX -= rotationSpeed; break;
+                case 5: currentLeg->ankleRotY -= rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ -= rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase -= rotationSpeed;
+                    currentLeg->bigToeMid -= rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip -= rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase -= rotationSpeed;
+                    currentLeg->secondToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase -= rotationSpeed;
+                    currentLeg->middleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase -= rotationSpeed;
+                    currentLeg->fourthToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase -= rotationSpeed;
+                    currentLeg->littleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 1) { // Right leg
+                LegControl* currentLeg = &rightLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX -= rotationSpeed; break;
+                case 1: currentLeg->hipRotY -= rotationSpeed; break;
+                case 2: currentLeg->hipRotZ -= rotationSpeed; break;
+                case 3: currentLeg->kneeRot -= rotationSpeed; break;
+                case 4: currentLeg->ankleRotX -= rotationSpeed; break;
+                case 5: currentLeg->ankleRotY -= rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ -= rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase -= rotationSpeed;
+                    currentLeg->bigToeMid -= rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip -= rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase -= rotationSpeed;
+                    currentLeg->secondToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase -= rotationSpeed;
+                    currentLeg->middleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase -= rotationSpeed;
+                    currentLeg->fourthToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase -= rotationSpeed;
+                    currentLeg->littleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            break;
+
+        case VK_RIGHT:
+        case 'D':
+            if (selectedPart == 0) { // Left leg
+                LegControl* currentLeg = &leftLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX += rotationSpeed; break;
+                case 1: currentLeg->hipRotY += rotationSpeed; break;
+                case 2: currentLeg->hipRotZ += rotationSpeed; break;
+                case 3: currentLeg->kneeRot += rotationSpeed; break;
+                case 4: currentLeg->ankleRotX += rotationSpeed; break;
+                case 5: currentLeg->ankleRotY += rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ += rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase += rotationSpeed;
+                    currentLeg->bigToeMid += rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip += rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase += rotationSpeed;
+                    currentLeg->secondToeMid += rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase += rotationSpeed;
+                    currentLeg->middleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase += rotationSpeed;
+                    currentLeg->fourthToeMid += rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase += rotationSpeed;
+                    currentLeg->littleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip += rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 1) { // Right leg
+                LegControl* currentLeg = &rightLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX += rotationSpeed; break;
+                case 1: currentLeg->hipRotY += rotationSpeed; break;
+                case 2: currentLeg->hipRotZ += rotationSpeed; break;
+                case 3: currentLeg->kneeRot += rotationSpeed; break;
+                case 4: currentLeg->ankleRotX += rotationSpeed; break;
+                case 5: currentLeg->ankleRotY += rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ += rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase += rotationSpeed;
+                    currentLeg->bigToeMid += rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip += rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase += rotationSpeed;
+                    currentLeg->secondToeMid += rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase += rotationSpeed;
+                    currentLeg->middleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase += rotationSpeed;
+                    currentLeg->fourthToeMid += rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase += rotationSpeed;
+                    currentLeg->littleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip += rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            break;
+
+        // Reset poses
+        case 'Z':
+            memset(&leftLeg, 0, sizeof(LegControl));
+            memset(&rightLeg, 0, sizeof(LegControl));
+            break;
+
+        case 'O': // Open toes
+            if (selectedPart == 0 || selectedPart == 1) {
+                LegControl* currentLeg = (selectedPart == 0) ? &leftLeg : &rightLeg;
+                currentLeg->bigToeBase = 0;
+                currentLeg->bigToeMid = 0;
+                currentLeg->bigToeTip = 0;
+                currentLeg->secondToeBase = 0;
+                currentLeg->secondToeMid = 0;
+                currentLeg->secondToeTip = 0;
+                currentLeg->middleToeBase = 0;
+                currentLeg->middleToeMid = 0;
+                currentLeg->middleToeTip = 0;
+                currentLeg->fourthToeBase = 0;
+                currentLeg->fourthToeMid = 0;
+                currentLeg->fourthToeTip = 0;
+                currentLeg->littleToeBase = 0;
+                currentLeg->littleToeMid = 0;
+                currentLeg->littleToeTip = 0;
+            }
+            break;
+        }
+    }
+    break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc)
+{
+    PIXELFORMATDESCRIPTOR pfd = {};
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+
+    int pixelFormat = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, pixelFormat, &pfd);
+}
+
+void drawCube(float width, float height, float depth)
+{
+    float w = width / 2;
+    float h = height / 2;
+    float d = depth / 2;
+
+    glBegin(GL_QUADS);
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(-w, -h, d); glVertex3f(w, -h, d); glVertex3f(w, h, d); glVertex3f(-w, h, d);
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(-w, h, -d); glVertex3f(w, h, -d); glVertex3f(w, -h, -d);
+    glNormal3f(-1.0f, 0.0f, 0.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(-w, -h, d); glVertex3f(-w, h, d); glVertex3f(-w, h, -d);
+    glNormal3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(w, -h, -d); glVertex3f(w, h, -d); glVertex3f(w, h, d); glVertex3f(w, -h, d);
+    glNormal3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(-w, h, -d); glVertex3f(-w, h, d); glVertex3f(w, h, d); glVertex3f(w, h, -d);
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(w, -h, -d); glVertex3f(w, -h, d); glVertex3f(-w, -h, d);
+    glEnd();
+}
+
+void drawCylinder(float radius, float height, int segments = 12)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluCylinder(quad, radius, radius, height, segments, 1);
+    gluDeleteQuadric(quad);
+}
+
+void drawSphere(float radius, int segments = 12)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluSphere(quad, radius, segments, segments);
+    gluDeleteQuadric(quad);
+}
+
+void drawToe(float baseRot, float midRot, float tipRot, float length = 0.18f, float scale = 1.0f)
+{
+    glPushMatrix();
+    glRotatef(baseRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.018f * scale, length * 0.45f);
+    glTranslatef(0.0f, 0.0f, length * 0.45f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.02f * scale);
+    glRotatef(midRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.015f * scale, length * 0.35f);
+    glTranslatef(0.0f, 0.0f, length * 0.35f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.017f * scale);
+    glRotatef(tipRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.012f * scale, length * 0.2f);
+    glTranslatef(0.0f, 0.0f, length * 0.2f);
+    glColor3f(0.7f, 0.5f, 0.3f);
+    drawSphere(0.015f * scale);
+    glPopMatrix();
+}
+
+void drawBigToe(float baseRot, float midRot, float tipRot)
+{
+    glPushMatrix();
+    glRotatef(-30, 0.0f, 1.0f, 0.0f); // Angle for opposable big toe
+    glRotatef(15, 1.0f, 0.0f, 0.0f);
+    drawToe(baseRot, midRot, tipRot, 0.22f, 1.4f);
+    glPopMatrix();
+}
+
+void drawFoot(const LegControl& leg)
+{
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCube(0.12f, 0.035f, 0.2f);
+    glPushMatrix();
+    glTranslatef(-0.045f, 0.0f, 0.12f);
+    drawBigToe(leg.bigToeBase, leg.bigToeMid, leg.bigToeTip);
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef(-0.02f, 0.0f, 0.18f);
+    drawToe(leg.secondToeBase, leg.secondToeMid, leg.secondToeTip);
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef(0.01f, 0.0f, 0.19f);
+    drawToe(leg.middleToeBase, leg.middleToeMid, leg.middleToeTip);
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef(0.04f, 0.0f, 0.18f);
+    drawToe(leg.fourthToeBase, leg.fourthToeMid, leg.fourthToeTip);
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef(0.06f, 0.0f, 0.16f);
+    drawToe(leg.littleToeBase, leg.littleToeMid, leg.littleToeTip, 0.15f, 0.8f);
+    glPopMatrix();
+}
+
+void drawLeg(const LegControl& leg, bool isRight = false)
+{
+    glPushMatrix();
+    if (isRight) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+    glRotatef(leg.hipRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(leg.hipRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(leg.hipRotZ, 0.0f, 0.0f, 1.0f);
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.065f, 0.6f);
+    glTranslatef(0.0f, 0.0f, 0.6f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.07f);
+    glRotatef(leg.kneeRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.055f, 0.55f);
+    glTranslatef(0.0f, 0.0f, 0.55f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.055f);
+    glRotatef(leg.ankleRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(leg.ankleRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(leg.ankleRotZ, 0.0f, 0.0f, 1.0f);
+    glTranslatef(0.0f, 0.0f, 0.02f);
+    drawFoot(leg);
+    glPopMatrix();
+}
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    GLfloat lightPos[] = { 2.0f, 2.0f, 2.0f, 1.0f };
+    GLfloat lightAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+    GLfloat lightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat lightSpecular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glTranslatef(0.0f, 0.5f, -4.0f);
+
+    // Draw left leg
+    glPushMatrix();
+    glTranslatef(-0.2f, 0.0f, 0.0f);
+    if (selectedPart == 0) {
+        glColor3f(1.0f, 0.8f, 0.8f);
+    }
+    drawLeg(leftLeg, false);
+    glPopMatrix();
+
+    // Draw right leg
+    glPushMatrix();
+    glTranslatef(0.2f, 0.0f, 0.0f);
+    if (selectedPart == 1) {
+        glColor3f(1.0f, 0.8f, 0.8f);
+    }
+    drawLeg(rightLeg, true);
+    glPopMatrix();
+
+    glDisable(GL_LIGHTING);
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    RegisterClassEx(&wc);
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    wglMakeCurrent(hdc, hglrc);
+    ShowWindow(hWnd, nCmdShow);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45, 1024.0 / 768.0, 0.1, 100);
+
+    glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+
+    MSG msg = {};
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+
+    return 0;
+}
+
+/*
+CONTROLS - WUKONG LEG MODEL:
+
+TAB - Cycle through parts:
+    0 - Left Leg
+    1 - Right Leg
+
+NUMBER KEYS (1-9, 0, -, +):
+    1-3: Hip (X, Y, Z)
+    4: Knee
+    5-7: Ankle (X, Y, Z)
+    8-12: Toes (Big toe to Little toe)
+
+ARROW KEYS/A-D:
+    LEFT/A - Rotate selected joint negative
+    RIGHT/D - Rotate selected joint positive
+
+OTHER CONTROLS:
+    Z - Reset all joints to default position
+    O - Open toes (selected leg)
+*/

@@ -1,0 +1,294 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <cmath>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "OpenGL Western Boot 3D"
+
+// Forward declaration of the display function
+void display();
+void drawBootBody();
+void drawHeel();
+void drawSole();
+void drawStitching();
+
+// Material properties
+void setLeatherMaterial(float r, float g, float b) {
+    GLfloat mat_ambient[] = { r * 0.2f, g * 0.2f, b * 0.2f, 1.0f };
+    GLfloat mat_diffuse[] = { r, g, b, 1.0f };
+    GLfloat mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    GLfloat mat_shininess[] = { 20.0f };
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+}
+
+// Standard Windows procedure
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) PostQuitMessage(0);
+        break;
+
+    default:
+        return DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+    return 0;
+}
+//--------------------------------------------------------------------
+
+bool initPixelFormat(HDC hdc)
+{
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+    pfd.cAlphaBits = 8;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+    pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd) ? true : false;
+}
+
+void drawHeel() {
+    // Draw the heel as a 3D block
+    setLeatherMaterial(0.36f, 0.2f, 0.09f);
+    
+    GLfloat depth = 0.4f;  // Depth of the heel
+    
+    glBegin(GL_QUADS);
+    // Front face
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(-0.8f, -0.7f, depth/2);
+    glVertex3f(-0.4f, -0.7f, depth/2);
+    glVertex3f(-0.4f, -0.4f, depth/2);
+    glVertex3f(-0.85f, -0.4f, depth/2);
+    
+    // Back face
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    glVertex3f(-0.8f, -0.7f, -depth/2);
+    glVertex3f(-0.85f, -0.4f, -depth/2);
+    glVertex3f(-0.4f, -0.4f, -depth/2);
+    glVertex3f(-0.4f, -0.7f, -depth/2);
+    
+    // Top face
+    glNormal3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(-0.85f, -0.4f, depth/2);
+    glVertex3f(-0.4f, -0.4f, depth/2);
+    glVertex3f(-0.4f, -0.4f, -depth/2);
+    glVertex3f(-0.85f, -0.4f, -depth/2);
+    
+    // Bottom face
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glVertex3f(-0.8f, -0.7f, depth/2);
+    glVertex3f(-0.8f, -0.7f, -depth/2);
+    glVertex3f(-0.4f, -0.7f, -depth/2);
+    glVertex3f(-0.4f, -0.7f, depth/2);
+    glEnd();
+}
+
+void drawSole() {
+    setLeatherMaterial(0.36f, 0.2f, 0.09f);
+    GLfloat depth = 0.15f;  // Thinner than the heel
+    
+    glBegin(GL_QUADS);
+    // Top surface
+    glNormal3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(-0.4f, -0.3f, depth/2);
+    glVertex3f(0.9f, -0.3f, depth/2);
+    glVertex3f(0.9f, -0.3f, -depth/2);
+    glVertex3f(-0.4f, -0.3f, -depth/2);
+    
+    // Bottom surface
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glVertex3f(-0.4f, -0.65f, depth/2);
+    glVertex3f(-0.4f, -0.65f, -depth/2);
+    glVertex3f(0.8f, -0.65f, -depth/2);
+    glVertex3f(0.8f, -0.65f, depth/2);
+    
+    // Front edge
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(-0.4f, -0.65f, depth/2);
+    glVertex3f(0.8f, -0.65f, depth/2);
+    glVertex3f(1.0f, -0.4f, depth/2);
+    glVertex3f(0.9f, -0.3f, depth/2);
+    glEnd();
+}
+
+void drawBootBody() {
+    setLeatherMaterial(0.6f, 0.35f, 0.05f);
+    GLfloat depth = 0.4f;
+    
+    // Front face of the boot
+    glBegin(GL_QUADS);
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    // Main shaft section
+    glVertex3f(-0.7f, 1.0f, depth/2);
+    glVertex3f(-0.85f, -0.4f, depth/2);
+    glVertex3f(-0.4f, -0.4f, depth/2);
+    glVertex3f(-0.4f, -0.3f, depth/2);
+    
+    // Front section
+    glVertex3f(-0.4f, -0.3f, depth/2);
+    glVertex3f(0.9f, -0.3f, depth/2);
+    glVertex3f(0.2f, 0.1f, depth/2);
+    glVertex3f(0.1f, 0.5f, depth/2);
+    
+    // Top section
+    glVertex3f(0.1f, 0.5f, depth/2);
+    glVertex3f(0.2f, 1.0f, depth/2);
+    glVertex3f(-0.7f, 1.0f, depth/2);
+    glVertex3f(-0.5f, 0.85f, depth/2);
+    glEnd();
+    
+    // Back face (mirrored)
+    glBegin(GL_QUADS);
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    // Mirror the front face vertices with negative depth
+    glVertex3f(-0.7f, 1.0f, -depth/2);
+    glVertex3f(-0.5f, 0.85f, -depth/2);
+    glVertex3f(0.2f, 1.0f, -depth/2);
+    glVertex3f(0.1f, 0.5f, -depth/2);
+    glEnd();
+    
+    // Side walls to give thickness
+    glBegin(GL_QUADS);
+    glNormal3f(1.0f, 0.0f, 0.0f);
+    // Connect front and back faces
+    glVertex3f(-0.7f, 1.0f, depth/2);
+    glVertex3f(-0.7f, 1.0f, -depth/2);
+    glVertex3f(-0.85f, -0.4f, -depth/2);
+    glVertex3f(-0.85f, -0.4f, depth/2);
+    glEnd();
+}
+
+void drawStitching() {
+    GLfloat depth = 0.4f;  // Match the boot body depth
+    
+    glDisable(GL_LIGHTING);
+    glColor3f(0.9f, 0.8f, 0.6f);
+    glLineWidth(2.0f);
+    
+    // Draw decorative stitching on front face
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(-0.4f, 0.5f, depth/2 + 0.001f);
+    glVertex3f(-0.2f, 0.6f, depth/2 + 0.001f);
+    glVertex3f(0.0f, 0.5f, depth/2 + 0.001f);
+    glEnd();
+    
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(-0.35f, -0.2f, depth/2 + 0.001f);
+    glVertex3f(0.1f, -0.25f, depth/2 + 0.001f);
+    glVertex3f(0.6f, -0.2f, depth/2 + 0.001f);
+    glEnd();
+    
+    glEnable(GL_LIGHTING);
+}
+
+void display()
+{
+    glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // Enable 3D features
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+    
+    // Set up lighting
+    GLfloat light_position[] = { 1.0f, 1.0f, 1.0f, 0.0f };
+    GLfloat light_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+    
+    glLoadIdentity();
+    
+    // Set up camera
+    gluLookAt(0.0f, 0.0f, 3.0f,  // Camera position
+              0.0f, 0.0f, 0.0f,   // Look at point
+              0.0f, 1.0f, 0.0f);  // Up vector
+    
+    // Scale and position the boot
+    glScalef(0.5f, 0.5f, 0.5f);
+    glTranslatef(0.0f, -0.2f, 0.0f);
+    glRotatef(-30.0f, 0.0f, 1.0f, 0.0f);  // Slight rotation to show 3D
+    
+    // Draw the boot components
+    drawHeel();
+    drawSole();
+    drawBootBody();
+    drawStitching();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+    
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    
+    if (!RegisterClassEx(&wc)) return false;
+    
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        NULL, NULL, wc.hInstance, NULL);
+    
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+    
+    // Set up perspective projection
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, 800.0f/600.0f, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+    
+    ShowWindow(hWnd, nCmdShow);
+    
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+    
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        
+        display();
+        SwapBuffers(hdc);
+    }
+    
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+    return true;
+}

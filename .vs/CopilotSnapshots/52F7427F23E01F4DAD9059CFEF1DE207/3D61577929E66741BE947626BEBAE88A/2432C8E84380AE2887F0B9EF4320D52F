@@ -1,0 +1,402 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Traditional Boot Design"
+#define PI 3.14159265359
+
+// Global variables for camera control
+float rotationX = 15.0f;
+float rotationY = -25.0f;
+float zoom = -8.0f;
+
+// Utility function to draw a curved boot shaft using triangular strips
+void drawCurvedBootShaft(float height, float bottomRadius, float topRadius) {
+    int segments = 20;
+    float angleStep = 2.0f * PI / segments;
+    
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+        
+        // Bottom vertex
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, 0, z * bottomRadius);
+        
+        // Top vertex (slightly tapered and curved)
+        float topX = x * topRadius;
+        float topZ = z * topRadius * 0.9f; // Slightly flatten the back
+        glNormal3f(x, 0, z);
+        glVertex3f(topX, height, topZ);
+    }
+    glEnd();
+    
+    // Draw top cap
+    glBegin(GL_TRIANGLE_FAN);
+    glNormal3f(0, 1, 0);
+    glVertex3f(0, height, 0); // Center point
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle) * topRadius;
+        float z = sinf(angle) * topRadius * 0.9f;
+        glVertex3f(x, height, z);
+    }
+    glEnd();
+}
+
+// Helper function to draw organic foot shape
+void drawOrganicFootShape() {
+    // Draw the main foot body using multiple scaled spheres for organic shape
+    glPushMatrix();
+    // Toe area
+    glTranslatef(0.0f, 0.0f, 0.6f);
+    glScalef(0.6f, 0.5f, 0.8f);
+    GLUquadric* toe = gluNewQuadric();
+    gluSphere(toe, 0.5, 16, 16);
+    gluDeleteQuadric(toe);
+    glPopMatrix();
+    
+    // Mid foot
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    glScalef(0.7f, 0.6f, 1.0f);
+    GLUquadric* mid = gluNewQuadric();
+    gluSphere(mid, 0.5, 16, 16);
+    gluDeleteQuadric(mid);
+    glPopMatrix();
+    
+    // Heel area
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, -0.6f);
+    glScalef(0.65f, 0.55f, 0.7f);
+    GLUquadric* heel = gluNewQuadric();
+    gluSphere(heel, 0.5, 16, 16);
+    gluDeleteQuadric(heel);
+    glPopMatrix();
+}
+
+// Draw traditional decorative stitching
+void drawTraditionalStitching() {
+    glDisable(GL_LIGHTING);
+    glLineWidth(2.0f);
+    
+    // Toe cap stitching - curved line following the toe shape
+    glBegin(GL_LINE_STRIP);
+    for (int i = 0; i <= 20; i++) {
+        float angle = (i - 10) * 0.15f; // Arc from -1.5 to 1.5 radians
+        float x = sinf(angle) * 0.5f;
+        float y = -0.1f;
+        float z = cosf(angle) * 0.3f + 0.4f;
+        glVertex3f(x, y, z);
+    }
+    glEnd();
+    
+    // Side decorative stitching
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(-0.45f, -0.1f, 0.5f);
+    glVertex3f(-0.5f, 0.1f, 0.2f);
+    glVertex3f(-0.45f, 0.3f, -0.1f);
+    glVertex3f(-0.4f, 0.5f, -0.3f);
+    glEnd();
+    
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(0.45f, -0.1f, 0.5f);
+    glVertex3f(0.5f, 0.1f, 0.2f);
+    glVertex3f(0.45f, 0.3f, -0.1f);
+    glVertex3f(0.4f, 0.5f, -0.3f);
+    glEnd();
+    
+    // Central seam on top
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(0.0f, 0.3f, 0.6f);
+    glVertex3f(0.0f, 0.5f, 0.3f);
+    glVertex3f(0.0f, 0.7f, 0.0f);
+    glVertex3f(0.0f, 1.0f, -0.2f);
+    glEnd();
+    
+    glLineWidth(1.0f);
+    glEnable(GL_LIGHTING);
+}
+
+// Main function to draw a traditional boot
+void drawTraditionalBoot(bool isLeft) {
+    // Traditional earth-tone colors
+    GLfloat soleColor[] = { 0.25f, 0.15f, 0.1f, 1.0f };        // Dark brown sole
+    GLfloat leatherColor[] = { 0.6f, 0.4f, 0.25f, 1.0f };      // Rich brown leather
+    GLfloat darkerLeather[] = { 0.5f, 0.3f, 0.2f, 1.0f };      // Darker brown for accents
+    GLfloat stitchColor[] = { 0.8f, 0.7f, 0.5f, 1.0f };        // Light tan stitching
+    
+    glPushMatrix(); // Start of boot matrix
+
+    // Mirror the boot if it's the right one
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // --- Traditional Sole (flatter and more natural) ---
+    glColor3fv(soleColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.8f, 0.1f);
+    glScalef(0.75f, 0.08f, 2.2f);
+    GLUquadric* sole = gluNewQuadric();
+    gluSphere(sole, 0.5, 20, 20);
+    gluDeleteQuadric(sole);
+    glPopMatrix();
+
+    // --- Low Traditional Heel ---
+    glColor3fv(soleColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.65f, -0.8f);
+    glScalef(0.5f, 0.3f, 0.4f);
+    GLUquadric* heel = gluNewQuadric();
+    gluSphere(heel, 0.5, 12, 12);
+    gluDeleteQuadric(heel);
+    glPopMatrix();
+
+    // --- Main Foot Body (Organic Shape) ---
+    glColor3fv(leatherColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.3f, 0.2f);
+    drawOrganicFootShape();
+    glPopMatrix();
+
+    // --- Traditional Boot Shaft (Curved and Tapered) ---
+    glColor3fv(leatherColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.4f, -0.3f);
+    drawCurvedBootShaft(1.8f, 0.5f, 0.42f);
+    glPopMatrix();
+
+    // --- Ankle Padding/Cuff ---
+    glColor3fv(darkerLeather);
+    glPushMatrix();
+    glTranslatef(0.0f, 2.1f, -0.3f);
+    glScalef(0.45f, 0.15f, 0.45f);
+    GLUquadric* cuff = gluNewQuadric();
+    gluSphere(cuff, 1.0f, 16, 16);
+    gluDeleteQuadric(cuff);
+    glPopMatrix();
+
+    // --- Traditional Tongue ---
+    glColor3fv(leatherColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.2f, 0.6f);
+    glRotatef(-10, 1, 0, 0);
+    glScalef(0.3f, 0.05f, 0.8f);
+    GLUquadric* tongue = gluNewQuadric();
+    gluSphere(tongue, 0.5, 12, 12);
+    gluDeleteQuadric(tongue);
+    glPopMatrix();
+
+    // --- Side Reinforcement Panels ---
+    glColor3fv(darkerLeather);
+    // Left panel
+    glPushMatrix();
+    glTranslatef(-0.35f, 0.3f, 0.0f);
+    glScalef(0.1f, 0.8f, 0.6f);
+    GLUquadric* leftPanel = gluNewQuadric();
+    gluSphere(leftPanel, 0.5, 12, 12);
+    gluDeleteQuadric(leftPanel);
+    glPopMatrix();
+    
+    // Right panel
+    glPushMatrix();
+    glTranslatef(0.35f, 0.3f, 0.0f);
+    glScalef(0.1f, 0.8f, 0.6f);
+    GLUquadric* rightPanel = gluNewQuadric();
+    gluSphere(rightPanel, 0.5, 12, 12);
+    gluDeleteQuadric(rightPanel);
+    glPopMatrix();
+
+    // --- Traditional Decorative Stitching ---
+    glColor3fv(stitchColor);
+    drawTraditionalStitching();
+
+    // --- Simple Lacing Eyelets (Traditional Style) ---
+    glColor3fv(darkerLeather);
+    for (int i = 0; i < 5; i++) {
+        float y = 0.4f + i * 0.25f;
+        
+        // Left eyelet
+        glPushMatrix();
+        glTranslatef(-0.15f, y, 0.4f);
+        glScalef(0.03f, 0.03f, 0.03f);
+        GLUquadric* eyelet1 = gluNewQuadric();
+        gluSphere(eyelet1, 1.0f, 8, 8);
+        gluDeleteQuadric(eyelet1);
+        glPopMatrix();
+        
+        // Right eyelet
+        glPushMatrix();
+        glTranslatef(0.15f, y, 0.4f);
+        glScalef(0.03f, 0.03f, 0.03f);
+        GLUquadric* eyelet2 = gluNewQuadric();
+        gluSphere(eyelet2, 1.0f, 8, 8);
+        gluDeleteQuadric(eyelet2);
+        glPopMatrix();
+    }
+
+    // --- Traditional Lacing ---
+    glDisable(GL_LIGHTING);
+    glColor3f(0.3f, 0.2f, 0.1f); // Dark brown lacing
+    glLineWidth(3.0f);
+    
+    for (int i = 0; i < 4; i++) {
+        float y1 = 0.4f + i * 0.25f;
+        float y2 = 0.4f + (i + 1) * 0.25f;
+        
+        // Cross lacing pattern
+        glBegin(GL_LINES);
+        glVertex3f(-0.15f, y1, 0.41f);
+        glVertex3f(0.15f, y2, 0.41f);
+        glVertex3f(0.15f, y1, 0.41f);
+        glVertex3f(-0.15f, y2, 0.41f);
+        glEnd();
+    }
+    
+    glLineWidth(1.0f);
+    glEnable(GL_LIGHTING);
+
+    glPopMatrix(); // End of boot matrix
+}
+
+// --- APPLICATION FRAMEWORK (No changes needed below this line) ---
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    GLfloat lightPos0[] = { 4.0f, 5.0f, 6.0f, 1.0f };
+    GLfloat lightAmbient0[] = { 0.3f, 0.25f, 0.2f, 1.0f };  // Warmer ambient light
+    GLfloat lightDiffuse0[] = { 0.9f, 0.8f, 0.7f, 1.0f };   // Warm diffuse light
+    GLfloat lightSpecular0[] = { 0.6f, 0.5f, 0.4f, 1.0f };  // Subdued specular
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+
+    GLfloat matShininess[] = { 20.0f }; // Lower shininess for more matte leather look
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_ESCAPE: PostQuitMessage(0); break;
+        case VK_LEFT:   rotationY -= 5.0f; break;
+        case VK_RIGHT:  rotationY += 5.0f; break;
+        case VK_UP:     rotationX -= 5.0f; break;
+        case VK_DOWN:   rotationX += 5.0f; break;
+        case 'W':       zoom += 0.5f; break;
+        case 'S':       zoom -= 0.5f; break;
+        }
+        break;
+
+    default:
+        break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc) {
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // Camera setup
+    glTranslatef(0.0f, -0.5f, zoom);
+    glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+    glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+    // Draw left traditional boot
+    glPushMatrix();
+    glTranslatef(-1.2f, 0.0f, 0.0f);
+    drawTraditionalBoot(true);
+    glPopMatrix();
+
+    // Draw right traditional boot
+    glPushMatrix();
+    glTranslatef(1.2f, 0.0f, 0.0f);
+    drawTraditionalBoot(false);
+    glPopMatrix();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow) {
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    ShowWindow(hWnd, nCmdShow);
+
+    // Initialize OpenGL
+    glEnable(GL_DEPTH_TEST);
+    setupLighting();
+    glMatrixMode(GL_PROJECTION);
+    gluPerspective(45.0f, 1024.0f / 768.0f, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glClearColor(0.2f, 0.15f, 0.15f, 1.0f); // Dark brown background
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true) {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return (int)msg.wParam;
+}

@@ -1,0 +1,1598 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Black Myth Wukong - Armored Monkey King Warrior"
+#define PI 3.14159f
+
+// Global variables for camera control
+float rotationX = 10.0f;
+float rotationY = 0.0f;
+float zoom = -15.0f;
+
+// Forward declarations
+void drawWukongMuscularLeg(bool isLeft);
+void drawHighContrastArmoredPants(float legHeight);
+void drawWukongOuterArmorLayer(float legHeight);
+void drawEnhancedHeritageBootWithContrast(bool isLeft);
+void drawBlackMythWukongCharacter(bool isLeft);
+void drawDecorativeBowKnot();
+void drawRealistic3DShoelaces();  // New forward declaration
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style outer armor layer with enhanced depth variations
+void drawWukongOuterArmorLayer(float legHeight) {
+    // Enhanced Wukong armor colors with rich depth variations
+    GLfloat goldenBase[] = { 0.80f, 0.65f, 0.20f, 1.0f };         // Base golden armor
+    GLfloat goldenLight[] = { 0.95f, 0.78f, 0.28f, 1.0f };        // Bright golden highlights
+    GLfloat goldenMid[] = { 0.72f, 0.58f, 0.15f, 1.0f };          // Mid-tone golden
+    GLfloat goldenDeep[] = { 0.58f, 0.45f, 0.10f, 1.0f };         // Deep golden shadows
+    GLfloat bronzeBase[] = { 0.70f, 0.45f, 0.15f, 1.0f };         // Base bronze
+    GLfloat bronzeLight[] = { 0.82f, 0.55f, 0.22f, 1.0f };        // Light bronze highlights
+    GLfloat bronzeDeep[] = { 0.55f, 0.32f, 0.08f, 1.0f };         // Deep bronze shadows
+    GLfloat darkMetalBase[] = { 0.15f, 0.12f, 0.10f, 1.0f };      // Base dark metal
+    GLfloat darkMetalLight[] = { 0.22f, 0.18f, 0.15f, 1.0f };     // Lighter dark metal
+    GLfloat jadeBase[] = { 0.20f, 0.60f, 0.30f, 1.0f };           // Base jade
+    GLfloat jadeLight[] = { 0.28f, 0.75f, 0.40f, 1.0f };          // Light jade
+    GLfloat jadeDeep[] = { 0.12f, 0.45f, 0.20f, 1.0f };           // Deep jade
+    GLfloat redBase[] = { 0.80f, 0.20f, 0.10f, 1.0f };            // Base red
+    GLfloat redLight[] = { 0.95f, 0.35f, 0.20f, 1.0f };           // Light red
+    GLfloat redDeep[] = { 0.60f, 0.12f, 0.05f, 1.0f };            // Deep red
+
+    float armorBottom = 3.8f;
+    float armorTop = armorBottom + legHeight + 1.5f;
+
+    // --- MAIN OUTER ARMOR SHELL with depth gradients ---
+    int segments = 28;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Create depth through lighting simulation
+        float lightFactor = (cosf(angle + PI * 0.3f) + 1.0f) * 0.5f;
+        if (lightFactor > 0.7f) {
+            glColor3fv(goldenLight);     // Bright highlights
+        }
+        else if (lightFactor > 0.4f) {
+            glColor3fv(goldenBase);      // Mid tones
+        }
+        else if (lightFactor > 0.2f) {
+            glColor3fv(goldenMid);       // Darker mid tones
+        }
+        else {
+            glColor3fv(goldenDeep);      // Deep shadows
+        }
+
+        float bottomRadius = 0.4f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, armorBottom, z * bottomRadius);
+
+        float topRadius = 0.7f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, armorTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- SEGMENTED ARMOR PLATES with rich depth variations ---
+    for (int segment = 0; segment < 6; segment++) {
+        float segmentHeight = armorBottom + 0.8f + (segment * 0.7f);
+        float heightFactor = (float)segment / 5.0f;  // 0 to 1 from bottom to top
+
+        // Vary golden armor based on height and position
+        if (heightFactor > 0.6f) {
+            glColor3fv(goldenLight);     // Upper segments brighter
+        }
+        else if (heightFactor > 0.3f) {
+            glColor3fv(goldenBase);      // Middle segments
+        }
+        else {
+            glColor3fv(goldenMid);       // Lower segments more subdued
+        }
+
+        glPushMatrix();
+        glTranslatef(0.0f, segmentHeight, 0.0f);
+        glRotatef(90, 1, 0, 0);
+        glScalef(0.42f + (segment * 0.05f), 0.42f + (segment * 0.05f), 0.08f);
+        GLUquadric* armorRing = gluNewQuadric();
+        gluCylinder(armorRing, 1.0f, 1.0f, 1.0f, segments, 1);
+        gluDeleteQuadric(armorRing);
+        glPopMatrix();
+
+        // Bronze decorative trim with depth variations
+        if (segment % 2 == 0) {
+            glColor3fv(bronzeLight);     // Alternating bright bronze
+        }
+        else {
+            glColor3fv(bronzeBase);      // Alternating standard bronze
+        }
+
+        glPushMatrix();
+        glTranslatef(0.0f, segmentHeight + 0.04f, 0.0f);
+        glRotatef(90, 1, 0, 0);
+        glScalef(0.44f + (segment * 0.05f), 0.44f + (segment * 0.05f), 0.02f);
+        GLUquadric* trim = gluNewQuadric();
+        gluCylinder(trim, 1.0f, 1.0f, 1.0f, segments, 1);
+        gluDeleteQuadric(trim);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED KNEE ARMOR with rich depth ---
+    glColor3fv(goldenBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 4.8f, 0.3f);
+    glScalef(0.5f, 0.35f, 0.18f);
+    GLUquadric* kneeArmor = gluNewQuadric();
+    gluSphere(kneeArmor, 1.0, 28, 24);
+    gluDeleteQuadric(kneeArmor);
+    glPopMatrix();
+
+    // Add knee armor highlights
+    glColor3fv(goldenLight);
+    glPushMatrix();
+    glTranslatef(0.08f, 4.85f, 0.35f);
+    glScalef(0.2f, 0.15f, 0.08f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 16, 12);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    // Add knee armor shadows
+    glColor3fv(goldenDeep);
+    glPushMatrix();
+    glTranslatef(-0.08f, 4.75f, 0.28f);
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 16, 12);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Jade accents with depth variations
+    for (int i = 0; i < 8; i++) {
+        float angle = i * 2.0f * PI / 8.0f;
+        float x = sinf(angle) * 0.35f;
+        float z = cosf(angle) * 0.12f + 0.35f;
+
+        // Vary jade colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(jadeLight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(jadeDeep);
+        }
+        else {
+            glColor3fv(jadeBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, 4.8f, z);
+        glScalef(0.03f, 0.03f, 0.03f);
+        GLUquadric* jadeStud = gluNewQuadric();
+        gluSphere(jadeStud, 1.0f, 10, 10);
+        gluDeleteQuadric(jadeStud);
+        glPopMatrix();
+    }
+
+    // --- DECORATIVE SIDE PANELS with enhanced depth ---
+    for (int side = -1; side <= 1; side += 2) {
+        // Main side panel with gradient
+        if (side == -1) {
+            glColor3fv(bronzeBase);      // Left side base bronze
+        }
+        else {
+            glColor3fv(bronzeLight);     // Right side lighter bronze
+        }
+
+        glPushMatrix();
+        glTranslatef(side * 0.45f, 5.5f, 0.1f);
+        glScalef(0.15f, 1.8f, 0.3f);
+        GLUquadric* sidePanel = gluNewQuadric();
+        gluSphere(sidePanel, 1.0f, 20, 20);
+        gluDeleteQuadric(sidePanel);
+        glPopMatrix();
+
+        // Decorative studs with varied depth
+        for (int i = 0; i < 5; i++) {
+            float y = 4.8f + i * 0.3f;
+            float heightFactor = (float)i / 4.0f;
+
+            // Vary red accents based on height
+            if (heightFactor > 0.6f) {
+                glColor3fv(redLight);
+            }
+            else if (heightFactor < 0.3f) {
+                glColor3fv(redDeep);
+            }
+            else {
+                glColor3fv(redBase);
+            }
+
+            glPushMatrix();
+            glTranslatef(side * 0.45f, y, 0.2f);
+            glScalef(0.04f, 0.04f, 0.04f);
+            GLUquadric* stud = gluNewQuadric();
+            gluSphere(stud, 1.0f, 12, 12);
+            gluDeleteQuadric(stud);
+            glPopMatrix();
+        }
+    }
+
+    // --- DECORATIVE ENGRAVINGS with enhanced golden variations ---
+    glDisable(GL_LIGHTING);
+    glLineWidth(2.5f);
+
+    // Cloud pattern engravings with depth variation
+    for (int layer = 0; layer < 4; layer++) {
+        float y = 4.5f + layer * 0.8f;
+        float layerFactor = (float)layer / 3.0f;
+
+        // Vary engraving brightness based on layer
+        if (layerFactor > 0.6f) {
+            glColor3f(0.98f, 0.85f, 0.35f);     // Brightest top layers
+        }
+        else if (layerFactor > 0.3f) {
+            glColor3f(0.90f, 0.80f, 0.30f);     // Medium layers
+        }
+        else {
+            glColor3f(0.82f, 0.72f, 0.25f);     // Deeper bottom layers
+        }
+
+        glBegin(GL_LINE_STRIP);
+        for (int i = 0; i <= 20; i++) {
+            float angle = i * 2.0f * PI / 20.0f;
+            float radius = 0.3f + sinf(angle * 3.0f) * 0.05f;
+            float x = cosf(angle) * radius;
+            float z = sinf(angle) * radius * 0.7f + 0.2f;
+            glVertex3f(x, y, z);
+        }
+        glEnd();
+    }
+
+    // Dragon scale pattern with depth variation
+    for (int ring = 0; ring < 3; ring++) {
+        float y = 5.2f + ring * 0.7f;
+        float ringFactor = (float)ring / 2.0f;
+
+        if (ringFactor > 0.6f) {
+            glColor3f(0.95f, 0.82f, 0.32f);     // Bright upper scales
+        }
+        else {
+            glColor3f(0.85f, 0.75f, 0.28f);     // Deeper lower scales
+        }
+
+        for (int scale = 0; scale < 12; scale++) {
+            float angle = scale * 2.0f * PI / 12.0f;
+            float x = cosf(angle) * 0.38f;
+            float z = sinf(angle) * 0.25f + 0.15f;
+
+            glBegin(GL_LINE_LOOP);
+            for (int i = 0; i < 6; i++) {
+                float scaleAngle = i * PI / 3.0f;
+                float dx = cosf(scaleAngle) * 0.03f;
+                float dz = sinf(scaleAngle) * 0.02f;
+                glVertex3f(x + dx, y, z + dz);
+            }
+            glEnd();
+        }
+    }
+
+    glLineWidth(1.0f);
+    glEnable(GL_LIGHTING);
+}
+
+// Function to draw treaded sole pattern
+void drawTreadedSole() {
+    glDisable(GL_LIGHTING);
+    glLineWidth(2.0f);
+    glColor3f(0.1f, 0.08f, 0.06f); // Very dark brown for treads
+
+    // Draw horizontal tread lines
+    for (int i = 0; i < 8; i++) {
+        float z = -1.0f + (i * 0.25f);
+        glBegin(GL_LINES);
+        for (int j = 0; j < 6; j++) {
+            float x = -0.3f + (j * 0.12f);
+            glVertex3f(x, -0.82f, z);
+            glVertex3f(x + 0.08f, -0.82f, z);
+        }
+        glEnd();
+    }
+
+    // Draw diagonal tread pattern
+    for (int i = 0; i < 12; i++) {
+        float z = -1.0f + (i * 0.15f);
+        glBegin(GL_LINES);
+        glVertex3f(-0.35f, -0.82f, z);
+        glVertex3f(0.35f, -0.82f, z + 0.1f);
+        glEnd();
+    }
+
+    glLineWidth(1.0f);
+    glEnable(GL_LIGHTING);
+}
+
+// Function to draw reinforced toe cap - simplified version
+void drawReinforcedToeCap() {
+    // This function is now integrated into the main boot function
+}
+
+// Function to draw speed hooks for quick lacing
+void drawSpeedHooks() {
+    GLfloat metalColor[] = { 0.7f, 0.7f, 0.7f, 1.0f }; // Metallic color
+    glColor3fv(metalColor);
+
+    for (int i = 0; i < 4; i++) { // INCREASED from 3 to 4 speed hooks for taller boots
+        float y = 1.6f + i * 0.25f; // ADJUSTED spacing for taller boot
+
+        // Left speed hook
+        glPushMatrix();
+        glTranslatef(-0.18f, y, 0.35f);
+        glRotatef(90, 0, 1, 0);
+        glScalef(0.025f, 0.1f, 0.025f); // Larger hooks
+        GLUquadric* leftHook = gluNewQuadric();
+        gluCylinder(leftHook, 1.0f, 1.0f, 1.0f, 8, 1);
+        gluDeleteQuadric(leftHook);
+        glPopMatrix();
+
+        // Right speed hook
+        glPushMatrix();
+        glTranslatef(0.18f, y, 0.35f);
+        glRotatef(90, 0, 1, 0);
+        glScalef(0.025f, 0.1f, 0.025f); // Larger hooks
+        GLUquadric* rightHook = gluNewQuadric();
+        gluCylinder(rightHook, 1.0f, 1.0f, 1.0f, 8, 1);
+        gluDeleteQuadric(rightHook);
+        glPopMatrix();
+    }
+}
+
+// Function to draw ankle support padding
+void drawAnkleSupport() {
+    GLfloat paddingColor[] = { 0.45f, 0.28f, 0.18f, 1.0f }; // Padded material
+    glColor3fv(paddingColor);
+
+    // Inner ankle padding
+    glPushMatrix();
+    glTranslatef(-0.25f, 0.8f, -0.1f);
+    glScalef(0.12f, 0.4f, 0.3f);
+    GLUquadric* innerPadding = gluNewQuadric();
+    gluSphere(innerPadding, 0.5, 12, 12);
+    gluDeleteQuadric(innerPadding);
+    glPopMatrix();
+
+    // Outer ankle padding
+    glPushMatrix();
+    glTranslatef(0.25f, 0.8f, -0.1f);
+    glScalef(0.12f, 0.4f, 0.3f);
+    GLUquadric* outerPadding = gluNewQuadric();
+    gluSphere(outerPadding, 0.5, 12, 12);
+    gluDeleteQuadric(outerPadding);
+    glPopMatrix();
+}
+
+// Enhanced utility function to draw a curved boot shaft
+void drawCurvedBootShaft(float height, float bottomRadius, float topRadius) {
+    int segments = 20;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Bottom vertex
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, 0, z * bottomRadius);
+
+        // Top vertex (slightly tapered and curved)
+        float topX = x * topRadius;
+        float topZ = z * topRadius * 0.9f; // Slightly flatten the back
+        glNormal3f(x, 0, z);
+        glVertex3f(topX, height, topZ);
+    }
+    glEnd();
+
+    // Draw top cap
+    glBegin(GL_TRIANGLE_FAN);
+    glNormal3f(0, 1, 0);
+    glVertex3f(0, height, 0); // Center point
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle) * topRadius;
+        float z = sinf(angle) * topRadius * 0.9f;
+        glVertex3f(x, height, z);
+    }
+    glEnd();
+}
+
+// Enhanced function to draw organic foot shape
+void drawOrganicFootShape() {
+    // Draw the main foot body using multiple scaled spheres for organic shape
+    glPushMatrix();
+    // Toe area
+    glTranslatef(0.0f, 0.0f, 0.6f);
+    glScalef(0.6f, 0.5f, 0.8f);
+    GLUquadric* toe = gluNewQuadric();
+    gluSphere(toe, 0.5, 16, 16);
+    gluDeleteQuadric(toe);
+    glPopMatrix();
+
+    // Mid foot
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    glScalef(0.7f, 0.6f, 1.0f);
+    GLUquadric* mid = gluNewQuadric();
+    gluSphere(mid, 0.5, 16, 16);
+    gluDeleteQuadric(mid);
+    glPopMatrix();
+
+    // Heel area
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, -0.6f);
+    glScalef(0.65f, 0.55f, 0.7f);
+    GLUquadric* heel = gluNewQuadric();
+    gluSphere(heel, 0.5, 16, 16);
+    gluDeleteQuadric(heel);
+    glPopMatrix();
+}
+
+// Function to draw protective heel counter
+void drawHeelCounter() {
+    GLfloat counterColor[] = { 0.35f, 0.22f, 0.16f, 1.0f }; // Protective material
+    glColor3fv(counterColor);
+
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, -0.7f);
+    glScalef(0.6f, 0.8f, 0.5f);
+    GLUquadric* counter = gluNewQuadric();
+    gluSphere(counter, 0.5, 16, 16);
+    gluDeleteQuadric(counter);
+    glPopMatrix();
+}
+
+// Function to draw realistic 3D shoelaces with proper X-pattern overlapping
+void drawRealistic3DShoelaces() {
+    // Enhanced lace colors with realistic variations
+    GLfloat laceBase[] = { 0.18f, 0.12f, 0.07f, 1.0f };        // Rich dark leather base
+    GLfloat laceHighlight[] = { 0.28f, 0.20f, 0.12f, 1.0f };   // Highlighted areas
+    GLfloat laceShadow[] = { 0.12f, 0.08f, 0.04f, 1.0f };      // Shadow areas
+    GLfloat laceOver[] = { 0.22f, 0.15f, 0.09f, 1.0f };        // Overlapping sections
+    
+    // Eyelet positions (6 pairs, from bottom to top)
+    const int numEyelets = 6;
+    float eyeletPositions[numEyelets];
+    for (int i = 0; i < numEyelets; i++) {
+        eyeletPositions[i] = 0.4f + i * 0.28f;
+    }
+    
+    float eyeletLeftX = -0.18f;
+    float eyeletRightX = 0.18f;
+    float eyeletZ = 0.45f;
+    float laceThickness = 0.022f;
+    int laceResolution = 10;
+    
+    // Helper function to draw a single lace segment with proper 3D orientation
+    for (int segmentType = 0; segmentType < 4; segmentType++) {
+        
+        if (segmentType == 0) {
+            // === BOTTOM TO TOP DIAGONAL LACES (LEFT TO RIGHT) ===
+            for (int i = 0; i < numEyelets - 1; i++) {
+                float startX = eyeletLeftX;
+                float startY = eyeletPositions[i];
+                float startZ = eyeletZ;
+                float endX = eyeletRightX;
+                float endY = eyeletPositions[i + 1];
+                float endZ = eyeletZ;
+                float zOffset = 0.0f;
+                
+                glColor3fv(laceBase);
+                
+                // Calculate direction vector and length
+                float dx = endX - startX;
+                float dy = endY - startY;
+                float dz = endZ - startZ;
+                float length = sqrtf(dx*dx + dy*dy + dz*dz);
+                
+                if (length > 0.001f) {
+                    glPushMatrix();
+                    
+                    // Position at start point with Z offset for layering
+                    glTranslatef(startX, startY, startZ + zOffset);
+                    
+                    // Calculate rotation angles for proper orientation
+                    float angleY = atan2f(dx, dz) * 180.0f / PI;
+                    float angleX = -atan2f(dy, sqrtf(dx*dx + dz*dz)) * 180.0f / PI;
+                    
+                    glRotatef(angleY, 0, 1, 0);
+                    glRotatef(angleX, 1, 0, 0);
+                    
+                    // Draw the main lace cylinder
+                    GLUquadric* lace = gluNewQuadric();
+                    gluQuadricOrientation(lace, GLU_OUTSIDE);
+                    gluQuadricNormals(lace, GLU_SMOOTH);
+                    gluCylinder(lace, laceThickness, laceThickness, length, laceResolution, 1);
+                    
+                    // Add end caps for complete cylinder
+                    gluDisk(lace, 0.0f, laceThickness, laceResolution, 1);
+                    glPushMatrix();
+                    glTranslatef(0.0f, 0.0f, length);
+                    gluDisk(lace, 0.0f, laceThickness, laceResolution, 1);
+                    glPopMatrix();
+                    
+                    gluDeleteQuadric(lace);
+                    glPopMatrix();
+                    
+                    // Add highlight stripe along the lace for realism
+                    glColor3fv(laceHighlight);
+                    glPushMatrix();
+                    glTranslatef(startX + dx * 0.1f, startY + dy * 0.1f, startZ + dz * 0.1f + zOffset + 0.01f);
+                    glRotatef(angleY, 0, 1, 0);
+                    glRotatef(angleX, 1, 0, 0);
+                    
+                    GLUquadric* highlight = gluNewQuadric();
+                    gluQuadricOrientation(highlight, GLU_OUTSIDE);
+                    gluCylinder(highlight, laceThickness * 0.3f, laceThickness * 0.3f, length * 0.8f, 6, 1);
+                    gluDeleteQuadric(highlight);
+                    glPopMatrix();
+                }
+            }
+        }
+        else if (segmentType == 1) {
+            // === TOP TO BOTTOM DIAGONAL LACES (RIGHT TO LEFT) ===
+            for (int i = 0; i < numEyelets - 1; i++) {
+                float startX = eyeletRightX;
+                float startY = eyeletPositions[i];
+                float startZ = eyeletZ;
+                float endX = eyeletLeftX;
+                float endY = eyeletPositions[i + 1];
+                float endZ = eyeletZ;
+                float zOffset = 0.03f; // Higher Z for overlapping effect
+                
+                glColor3fv(laceOver);
+                
+                // Calculate direction vector and length
+                float dx = endX - startX;
+                float dy = endY - startY;
+                float dz = endZ - startZ;
+                float length = sqrtf(dx*dx + dy*dy + dz*dz);
+                
+                if (length > 0.001f) {
+                    glPushMatrix();
+                    
+                    // Position at start point with Z offset for layering
+                    glTranslatef(startX, startY, startZ + zOffset);
+                    
+                    // Calculate rotation angles for proper orientation
+                    float angleY = atan2f(dx, dz) * 180.0f / PI;
+                    float angleX = -atan2f(dy, sqrtf(dx*dx + dz*dz)) * 180.0f / PI;
+                    
+                    glRotatef(angleY, 0, 1, 0);
+                    glRotatef(angleX, 1, 0, 0);
+                    
+                    // Draw the main lace cylinder
+                    GLUquadric* lace = gluNewQuadric();
+                    gluQuadricOrientation(lace, GLU_OUTSIDE);
+                    gluQuadricNormals(lace, GLU_SMOOTH);
+                    gluCylinder(lace, laceThickness, laceThickness, length, laceResolution, 1);
+                    
+                    // Add end caps for complete cylinder
+                    gluDisk(lace, 0.0f, laceThickness, laceResolution, 1);
+                    glPushMatrix();
+                    glTranslatef(0.0f, 0.0f, length);
+                    gluDisk(lace, 0.0f, laceThickness, laceResolution, 1);
+                    glPopMatrix();
+                    
+                    gluDeleteQuadric(lace);
+                    glPopMatrix();
+                    
+                    // Add highlight stripe along the lace for realism
+                    glColor3fv(laceHighlight);
+                    glPushMatrix();
+                    glTranslatef(startX + dx * 0.1f, startY + dy * 0.1f, startZ + dz * 0.1f + zOffset + 0.01f);
+                    glRotatef(angleY, 0, 1, 0);
+                    glRotatef(angleX, 1, 0, 0);
+                    
+                    GLUquadric* highlight = gluNewQuadric();
+                    gluQuadricOrientation(highlight, GLU_OUTSIDE);
+                    gluCylinder(highlight, laceThickness * 0.3f, laceThickness * 0.3f, length * 0.8f, 6, 1);
+                    gluDeleteQuadric(highlight);
+                    glPopMatrix();
+                }
+            }
+        }
+        else if (segmentType == 2) {
+            // === HORIZONTAL CONNECTING SEGMENTS ===
+            // These represent the lace going through eyelets horizontally
+            for (int i = 1; i < numEyelets - 1; i += 2) { // Every other eyelet pair
+                float startX = eyeletLeftX;
+                float startY = eyeletPositions[i];
+                float startZ = eyeletZ;
+                float endX = eyeletRightX;
+                float endY = eyeletPositions[i];
+                float endZ = eyeletZ;
+                float zOffset = 0.015f;
+                
+                glColor3fv(laceBase);
+                
+                // Calculate direction vector and length
+                float dx = endX - startX;
+                float dy = endY - startY;
+                float dz = endZ - startZ;
+                float length = sqrtf(dx*dx + dy*dy + dz*dz);
+                
+                if (length > 0.001f) {
+                    glPushMatrix();
+                    
+                    // Position at start point with Z offset for layering
+                    glTranslatef(startX, startY, startZ + zOffset);
+                    
+                    // Calculate rotation angles for proper orientation
+                    float angleY = atan2f(dx, dz) * 180.0f / PI;
+                    float angleX = -atan2f(dy, sqrtf(dx*dx + dz*dz)) * 180.0f / PI;
+                    
+                    glRotatef(angleY, 0, 1, 0);
+                    glRotatef(angleX, 1, 0, 0);
+                    
+                    // Draw the main lace cylinder
+                    GLUquadric* lace = gluNewQuadric();
+                    gluQuadricOrientation(lace, GLU_OUTSIDE);
+                    gluQuadricNormals(lace, GLU_SMOOTH);
+                    gluCylinder(lace, laceThickness, laceThickness, length, laceResolution, 1);
+                    
+                    // Add end caps for complete cylinder
+                    gluDisk(lace, 0.0f, laceThickness, laceResolution, 1);
+                    glPushMatrix();
+                    glTranslatef(0.0f, 0.0f, length);
+                    gluDisk(lace, 0.0f, laceThickness, laceResolution, 1);
+                    glPopMatrix();
+                    
+                    gluDeleteQuadric(lace);
+                    glPopMatrix();
+                }
+            }
+        }
+        else if (segmentType == 3) {
+            // === REALISTIC INTERSECTION POINTS ===
+            // Add small cylindrical intersections where laces cross
+            for (int i = 0; i < numEyelets - 2; i++) {
+                for (int j = i + 1; j < numEyelets - 1; j++) {
+                    // Calculate intersection points of crossing diagonals
+                    float y1_start = eyeletPositions[i];
+                    float y1_end = eyeletPositions[i + 1];
+                    float y2_start = eyeletPositions[j];
+                    float y2_end = eyeletPositions[j + 1];
+                    
+                    // Parametric intersection calculation
+                    float denom = ((y1_end - y1_start) - (y2_end - y2_start));
+                    if (fabsf(denom) > 0.001f) {
+                        float t = (y2_start - y1_start) / denom;
+                        
+                        if (t > 0.1f && t < 0.9f) { // Only draw if intersection is in middle of segments
+                            float intersectX = eyeletLeftX + t * (eyeletRightX - eyeletLeftX);
+                            float intersectY = y1_start + t * (y1_end - y1_start);
+                            
+                            // Draw small intersection cylinder
+                            glColor3fv(laceShadow);
+                            glPushMatrix();
+                            glTranslatef(intersectX, intersectY, eyeletZ + 0.025f);
+                            GLUquadric* intersection = gluNewQuadric();
+                            gluSphere(intersection, laceThickness * 1.2f, 8, 8);
+                            gluDeleteQuadric(intersection);
+                            glPopMatrix();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // === CURVED LACE SEGMENTS AROUND EYELETS ===
+    // Add small curved segments where laces bend around eyelets
+    for (int i = 0; i < numEyelets; i++) {
+        float y = eyeletPositions[i];
+        
+        // Left and right eyelet curves
+        glColor3fv(laceBase);
+        for (int side = 0; side < 2; side++) { // 0=left, 1=right
+            float x = (side == 0) ? eyeletLeftX : eyeletRightX;
+            
+            glPushMatrix();
+            glTranslatef(x, y, eyeletZ + 0.02f);
+            
+            // Create a small curved segment
+            GLUquadric* curve = gluNewQuadric();
+            gluQuadricOrientation(curve, GLU_OUTSIDE);
+            
+            // Draw quarter-circle curves
+            for (int angle = 0; angle < 180; angle += 20) {
+                float rad = angle * PI / 180.0f;
+                float curveX = cosf(rad) * 0.03f;
+                float curveY = sinf(rad) * 0.03f;
+                
+                glPushMatrix();
+                glTranslatef(curveX, curveY, 0.0f);
+                gluSphere(curve, laceThickness * 0.7f, 6, 6);
+                glPopMatrix();
+            }
+            
+            gluDeleteQuadric(curve);
+            glPopMatrix();
+        }
+    }
+    
+    // === LOOSE LACE ENDS LEADING TO BOW ===
+    // Two lace ends coming from top eyelets
+    for (int side = 0; side < 2; side++) {
+        float x = (side == 0) ? eyeletLeftX : eyeletRightX;
+        float topY = eyeletPositions[numEyelets - 1];
+        
+        glColor3fv(laceBase);
+        glPushMatrix();
+        glTranslatef(x, topY, eyeletZ);
+        
+        // Angle the lace end upward toward the bow
+        glRotatef(70.0f + (side * 20.0f), 1, 0, 0); // 70-90 degrees upward
+        glRotatef((side == 0) ? -10.0f : 10.0f, 0, 0, 1); // Slight inward angle
+        
+        // Draw tapered lace end
+        GLUquadric* laceEnd = gluNewQuadric();
+        gluQuadricOrientation(laceEnd, GLU_OUTSIDE);
+        gluCylinder(laceEnd, laceThickness, laceThickness * 0.6f, 0.25f, laceResolution, 1);
+        gluDisk(laceEnd, 0.0f, laceThickness, laceResolution, 1);
+        gluDeleteQuadric(laceEnd);
+        glPopMatrix();
+        
+        // Add highlight to lace end
+        glColor3fv(laceHighlight);
+        glPushMatrix();
+        glTranslatef(x + 0.01f, topY + 0.01f, eyeletZ + 0.01f);
+        glRotatef(70.0f + (side * 20.0f), 1, 0, 0);
+        glRotatef((side == 0) ? -10.0f : 10.0f, 0, 0, 1);
+        
+        GLUquadric* endHighlight = gluNewQuadric();
+        gluCylinder(endHighlight, laceThickness * 0.3f, laceThickness * 0.2f, 0.2f, 6, 1);
+        gluDeleteQuadric(endHighlight);
+        glPopMatrix();
+    }
+    
+    // === AGLET TIPS (PLASTIC/METAL LACE TIPS) ===
+    // Add small metallic tips to lace ends for realism
+    GLfloat agletColor[] = { 0.4f, 0.4f, 0.42f, 1.0f }; // Metallic gray
+    
+    for (int side = 0; side < 2; side++) {
+        float x = (side == 0) ? eyeletLeftX : eyeletRightX;
+        float topY = eyeletPositions[numEyelets - 1];
+        
+        glColor3fv(agletColor);
+        glPushMatrix();
+        glTranslatef(x, topY + 0.15f, eyeletZ + 0.12f);
+        glRotatef(70.0f + (side * 20.0f), 1, 0, 0);
+        glRotatef((side == 0) ? -10.0f : 10.0f, 0, 0, 1);
+        
+        // Draw small metallic aglet
+        GLUquadric* aglet = gluNewQuadric();
+        gluQuadricOrientation(aglet, GLU_OUTSIDE);
+        gluCylinder(aglet, laceThickness * 1.1f, laceThickness * 0.8f, 0.04f, 8, 1);
+        
+        // Add end cap
+        glPushMatrix();
+        glTranslatef(0.0f, 0.0f, 0.04f);
+        gluSphere(aglet, laceThickness * 0.8f, 6, 6);
+        glPopMatrix();
+        
+        gluDeleteQuadric(aglet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw a decorative bow/knot at the top of the lacing area
+void drawDecorativeBowKnot() {
+    // Colors for the bow
+    GLfloat bowBase[] = { 0.18f, 0.10f, 0.05f, 1.0f };          // Rich dark leather
+    GLfloat bowLight[] = { 0.25f, 0.15f, 0.08f, 1.0f };         // Highlight areas
+    GLfloat bowDeep[] = { 0.12f, 0.06f, 0.03f, 1.0f };          // Shadow areas
+    
+    // Center knot - the main part that ties the loops together
+    glColor3fv(bowBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    glScalef(0.08f, 0.04f, 0.04f);
+    GLUquadric* bowCenter = gluNewQuadric();
+    gluSphere(bowCenter, 1.0f, 16, 16);
+    gluDeleteQuadric(bowCenter);
+    glPopMatrix();
+    
+    // Add highlight to the center knot
+    glColor3fv(bowLight);
+    glPushMatrix();
+    glTranslatef(0.02f, 0.01f, 0.01f);
+    glScalef(0.03f, 0.02f, 0.02f);
+    GLUquadric* knobHighlight = gluNewQuadric();
+    gluSphere(knobHighlight, 1.0f, 12, 12);
+    gluDeleteQuadric(knobHighlight);
+    glPopMatrix();
+    
+    // Left bow loop
+    glColor3fv(bowBase);
+    glPushMatrix();
+    glTranslatef(-0.10f, 0.0f, 0.0f);
+    glRotatef(30.0f, 0.0f, 0.0f, 1.0f);  // Tilt slightly
+    glRotatef(15.0f, 0.0f, 1.0f, 0.0f);  // Rotate a bit forward
+    glScalef(0.12f, 0.06f, 0.025f);
+    GLUquadric* leftLoop = gluNewQuadric();
+    gluSphere(leftLoop, 1.0f, 16, 16);
+    gluDeleteQuadric(leftLoop);
+    glPopMatrix();
+    
+    // Add highlight to left loop
+    glColor3fv(bowLight);
+    glPushMatrix();
+    glTranslatef(-0.12f, 0.01f, 0.01f);
+    glRotatef(30.0f, 0.0f, 0.0f, 1.0f);
+    glScalef(0.05f, 0.03f, 0.015f);
+    GLUquadric* leftHighlight = gluNewQuadric();
+    gluSphere(leftHighlight, 1.0f, 12, 12);
+    gluDeleteQuadric(leftHighlight);
+    glPopMatrix();
+    
+    // Add shadow to left loop
+    glColor3fv(bowDeep);
+    glPushMatrix();
+    glTranslatef(-0.08f, -0.01f, -0.01f);
+    glRotatef(30.0f, 0.0f, 0.0f, 1.0f);
+    glScalef(0.04f, 0.02f, 0.015f);
+    GLUquadric* leftShadow = gluNewQuadric();
+    gluSphere(leftShadow, 1.0f, 12, 12);
+    gluDeleteQuadric(leftShadow);
+    glPopMatrix();
+    
+    // Right bow loop
+    glColor3fv(bowBase);
+    glPushMatrix();
+    glTranslatef(0.10f, 0.0f, 0.0f);
+    glRotatef(-30.0f, 0.0f, 0.0f, 1.0f);  // Tilt slightly (mirror of left)
+    glRotatef(15.0f, 0.0f, 1.0f, 0.0f);   // Rotate a bit forward
+    glScalef(0.12f, 0.06f, 0.025f);
+    GLUquadric* rightLoop = gluNewQuadric();
+    gluSphere(rightLoop, 1.0f, 16, 16);
+    gluDeleteQuadric(rightLoop);
+    glPopMatrix();
+    
+    // Add highlight to right loop
+    glColor3fv(bowLight);
+    glPushMatrix();
+    glTranslatef(0.12f, 0.01f, 0.01f);
+    glRotatef(-30.0f, 0.0f, 0.0f, 1.0f);
+    glScalef(0.05f, 0.03f, 0.015f);
+    GLUquadric* rightHighlight = gluNewQuadric();
+    gluSphere(rightHighlight, 1.0f, 12, 12);
+    gluDeleteQuadric(rightHighlight);
+    glPopMatrix();
+    
+    // Add shadow to right loop
+    glColor3fv(bowDeep);
+    glPushMatrix();
+    glTranslatef(0.08f, -0.01f, -0.01f);
+    glRotatef(-30.0f, 0.0f, 0.0f, 1.0f);
+    glScalef(0.04f, 0.02f, 0.015f);
+    GLUquadric* rightShadow = gluNewQuadric();
+    gluSphere(rightShadow, 1.0f, 12, 12);
+    gluDeleteQuadric(rightShadow);
+    glPopMatrix();
+    
+    // Lower left tail of the bow
+    glColor3fv(bowBase);
+    glPushMatrix();
+    glTranslatef(-0.06f, -0.05f, -0.005f);
+    glRotatef(-15.0f, 0.0f, 0.0f, 1.0f);
+    glRotatef(-10.0f, 1.0f, 0.0f, 0.0f);
+    glScalef(0.05f, 0.10f, 0.02f);
+    GLUquadric* leftTail = gluNewQuadric();
+    gluSphere(leftTail, 1.0f, 14, 14);
+    gluDeleteQuadric(leftTail);
+    glPopMatrix();
+    
+    // Lower right tail of the bow
+    glColor3fv(bowBase);
+    glPushMatrix();
+    glTranslatef(0.06f, -0.05f, -0.005f);
+    glRotatef(15.0f, 0.0f, 0.0f, 1.0f);
+    glRotatef(-10.0f, 1.0f, 0.0f, 0.0f);
+    glScalef(0.05f, 0.10f, 0.02f);
+    GLUquadric* rightTail = gluNewQuadric();
+    gluSphere(rightTail, 1.0f, 14, 14);
+    gluDeleteQuadric(rightTail);
+    glPopMatrix();
+}
+
+// Enhanced function to draw smooth polygon shoes with complete coverage like real shoes
+void drawEnhancedHeritageBootWithContrast(bool isLeft) {
+    // Enhanced colors for realistic shoe appearance
+    GLfloat soleBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Dark sole base
+    GLfloat soleLight[] = { 0.12f, 0.09f, 0.06f, 1.0f };          // Sole highlights
+    GLfloat soleDeep[] = { 0.04f, 0.02f, 0.01f, 1.0f };           // Deep sole shadows
+
+    // Premium leather colors for smooth appearance
+    GLfloat leatherBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };        // Rich leather base
+    GLfloat leatherLight[] = { 0.58f, 0.42f, 0.28f, 1.0f };       // Leather highlights
+    GLfloat leatherMid[] = { 0.40f, 0.25f, 0.15f, 1.0f };         // Mid-tone leather
+    GLfloat leatherDeep[] = { 0.28f, 0.16f, 0.08f, 1.0f };        // Deep leather shadows
+
+    // Smooth upper materials
+    GLfloat upperBase[] = { 0.35f, 0.22f, 0.15f, 1.0f };          // Upper material base
+    GLfloat upperLight[] = { 0.45f, 0.32f, 0.22f, 1.0f };         // Upper highlights
+    GLfloat upperDeep[] = { 0.25f, 0.14f, 0.08f, 1.0f };          // Upper shadows
+
+    // Metal accents
+    GLfloat metalBase[] = { 0.45f, 0.45f, 0.47f, 1.0f };          // Metal base
+    GLfloat metalLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };         // Metal highlights
+    GLfloat metalDeep[] = { 0.28f, 0.28f, 0.30f, 1.0f };          // Metal shadows
+
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // === SEAMLESS SOLE CONSTRUCTION (COMPLETELY CLOSED LIKE REAL SHOES) ===
+    
+    // MAIN CONTINUOUS SOLE - Single seamless piece
+    glColor3fv(soleBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.75f, 0.1f);
+    glScalef(0.9f, 0.25f, 2.8f);  // Larger for complete coverage
+    GLUquadric* continuousSole = gluNewQuadric();
+    gluSphere(continuousSole, 0.5, 48, 48);  // High resolution for smoothness
+    gluDeleteQuadric(continuousSole);
+    glPopMatrix();
+
+    // PERFECTLY FLAT BOTTOM - No gaps or openings
+    glColor3fv(soleDeep);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.95f, 0.1f);
+    glRotatef(90, 1, 0, 0);
+    glScalef(0.92f, 2.85f, 0.05f);
+    GLUquadric* flatBottom = gluNewQuadric();
+    gluDisk(flatBottom, 0.0f, 0.5f, 48, 1);  // Completely sealed bottom
+    gluDeleteQuadric(flatBottom);
+    glPopMatrix();
+
+    // SEAMLESS SOLE EDGE - Continuous rim with no breaks
+    glColor3fv(soleLight);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.85f, 0.1f);
+    glRotatef(90, 1, 0, 0);
+    glScalef(0.91f, 2.82f, 0.08f);
+    GLUquadric* soleEdge = gluNewQuadric();
+    gluCylinder(soleEdge, 0.5, 0.5, 1.0, 48, 1);  // Smooth continuous edge
+    gluDeleteQuadric(soleEdge);
+    glPopMatrix();
+
+    // === SEAMLESS UPPER CONSTRUCTION ===
+    int segments = 48;  // High resolution for smooth appearance
+    float angleStep = 2.0f * PI / segments;
+    
+    // MAIN UPPER BODY - Single seamless piece
+    glColor3fv(leatherBase);
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+        
+        float lightFactor = (cosf(angle + PI * 0.25f) + 1.0f) * 0.5f;
+        if (lightFactor > 0.7f) glColor3fv(leatherLight);
+        else if (lightFactor > 0.3f) glColor3fv(leatherBase);
+        else glColor3fv(leatherDeep);
+        
+        glNormal3f(x, 0, z);
+        glVertex3f(x * 0.52f, -0.6f, z * 0.45f + 0.1f);  // Sole connection
+        glVertex3f(x * 0.48f, 2.9f, z * 0.4f);           // Top opening
+    }
+    glEnd();
+    
+    // TOP CLOSURE - Complete seal
+    glColor3fv(leatherMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 2.9f, 0.0f);
+    glRotatef(90, 1, 0, 0);
+    glScalef(0.48f, 0.4f, 0.08f);
+    GLUquadric* topClosure = gluNewQuadric();
+    gluDisk(topClosure, 0.0f, 1.0f, segments, 1);
+    gluDeleteQuadric(topClosure);
+    glPopMatrix();
+    
+    // SEAMLESS TOE CAP
+    glColor3fv(leatherBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.25f, 0.85f);
+    glScalef(0.72f, 0.65f, 0.9f);
+    GLUquadric* seamlessToe = gluNewQuadric();
+    gluSphere(seamlessToe, 0.5, 32, 32);
+    gluDeleteQuadric(seamlessToe);
+    glPopMatrix();
+    
+    // SEAMLESS HEEL
+    glColor3fv(leatherBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.25f, -0.45f);
+    glScalef(0.7f, 0.7f, 0.8f);
+    GLUquadric* seamlessHeel = gluNewQuadric();
+    gluSphere(seamlessHeel, 0.5, 32, 32);
+    gluDeleteQuadric(seamlessHeel);
+    glPopMatrix();
+    
+    // CONTINUOUS WELT
+    glColor3fv(upperBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.65f, 0.1f);
+    glRotatef(90, 1, 0, 0);
+    glScalef(0.87f, 2.75f, 0.08f);
+    GLUquadric* continuousWelt = gluNewQuadric();
+    gluCylinder(continuousWelt, 0.5, 0.5, 1.0, 48, 1);
+    gluDeleteQuadric(continuousWelt);
+    glPopMatrix();
+    
+    // SIMPLE EYELETS
+    glColor3fv(metalBase);
+    for (int i = 0; i < 6; i++) {
+        float y = 0.4f + i * 0.28f;
+        if (i % 2 == 0) glColor3fv(metalLight);
+        else glColor3fv(metalBase);
+        
+        glPushMatrix();
+        glTranslatef(-0.18f, y, 0.45f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* leftEyelet = gluNewQuadric();
+        gluSphere(leftEyelet, 1.0f, 12, 12);
+        gluDeleteQuadric(leftEyelet);
+        glPopMatrix();
+        
+        glPushMatrix();
+        glTranslatef(0.18f, y, 0.45f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rightEyelet = gluNewQuadric();
+        gluSphere(rightEyelet, 1.0f, 12, 12);
+        gluDeleteQuadric(rightEyelet);
+        glPopMatrix();
+    }
+    
+    // Draw realistic 3D shoelaces with X-pattern overlapping
+    drawRealistic3DShoelaces();
+    
+    // COLLAR
+    glColor3fv(upperBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 2.7f, 0.0f);
+    glScalef(0.5f, 0.18f, 0.42f);
+    GLUquadric* collar = gluNewQuadric();
+    gluSphere(collar, 1.0f, 24, 24);
+    gluDeleteQuadric(collar);
+    glPopMatrix();
+    
+    // MINIMAL TREAD
+    glDisable(GL_LIGHTING);
+    glColor3f(0.06f, 0.04f, 0.02f);
+    glLineWidth(1.0f);
+    
+    for (int i = 0; i < 12; i++) {
+        float z = -1.2f + (i * 0.2f);
+        glBegin(GL_LINES);
+        for (int j = 0; j < 8; j++) {
+            float x = -0.3f + (j * 0.075f);
+            glVertex3f(x, -0.93f, z);
+            glVertex3f(x + 0.05f, -0.93f, z);
+        }
+        glEnd();
+    }
+    
+    glEnable(GL_LIGHTING);
+    
+    // NEW: DECORATIVE BOW KNOT AT TOP OF LACING
+    glPushMatrix();
+    glTranslatef(0.0f, 2.0f, 0.48f); // Position at the top of the lacing area
+    drawDecorativeBowKnot();
+    glPopMatrix();
+    
+    glPopMatrix();
+}
+
+// Enhanced function to draw complete Black Myth Wukong character
+void drawBlackMythWukongCharacter(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Draw Wukong's enhanced muscular leg anatomy
+    drawWukongMuscularLeg(isLeft);
+
+    // Draw the original armored pants (now as inner layer)
+    drawHighContrastArmoredPants(3.5f);
+
+    // Draw the new ornate outer armor layer
+    drawWukongOuterArmorLayer(3.5f);
+
+    glPopMatrix();
+}
+
+// --- APPLICATION FRAMEWORK ---
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    GLfloat lightPos0[] = { 4.0f, 5.0f, 6.0f, 1.0f };
+    GLfloat lightAmbient0[] = { 0.3f, 0.25f, 0.2f, 1.0f };
+    GLfloat lightDiffuse0[] = { 0.95f, 0.9f, 0.8f, 1.0f };
+    GLfloat lightSpecular0[] = { 0.4f, 0.35f, 0.25f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+
+    GLfloat matShininess[] = { 12.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_ESCAPE: PostQuitMessage(0); break;
+        case VK_LEFT:   rotationY -= 5.0f; break;
+        case VK_RIGHT:  rotationY += 5.0f; break;
+        case VK_UP:     rotationX -= 5.0f; break;
+        case VK_DOWN:   rotationX += 5.0f; break;
+        case 'W':       zoom += 0.5f; break;
+        case 'S':       zoom -= 0.5f; break;
+        }
+        break;
+
+    default:
+        break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc) {
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // Camera setup optimized for the mighty Wukong
+    glTranslatef(0.0f, -4.0f, zoom);
+    glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+    glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+    // Enhanced Wukong skin tones with depth variations for waist and hip
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };     // Base skin tone
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };   // Highlighted areas
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };     // Mid-tone areas
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };  // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };   // Muscle highlights
+
+    // Enhanced hip area with depth variation
+    glColor3fv(wukongSkinBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 7.2f, 0.0f);
+    glScalef(1.0f, 0.8f, 0.7f);
+    GLUquadric* hip = gluNewQuadric();
+    gluSphere(hip, 0.5, 20, 20);
+    gluDeleteQuadric(hip);
+    glPopMatrix();
+
+    // Add hip highlights
+    glColor3fv(wukongSkinLight);
+    glPushMatrix();
+    glTranslatef(0.15f, 7.25f, 0.1f);  // Front-right highlight
+    glScalef(0.4f, 0.3f, 0.25f);
+    GLUquadric* hipHighlight = gluNewQuadric();
+    gluSphere(hipHighlight, 0.5, 16, 16);
+    gluDeleteQuadric(hipHighlight);
+    glPopMatrix();
+
+    // Add hip shadows
+    glColor3fv(muscleDefinition);
+    glPushMatrix();
+    glTranslatef(-0.15f, 7.15f, -0.1f);  // Back-left shadow
+    glScalef(0.35f, 0.25f, 0.2f);
+    GLUquadric* hipShadow = gluNewQuadric();
+    gluSphere(hipShadow, 0.5, 16, 16);
+    gluDeleteQuadric(hipShadow);
+    glPopMatrix();
+
+    // Lower back muscles with enhanced depth
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 7.0f, -0.3f);
+    glScalef(0.7f, 0.4f, 0.3f);
+    GLUquadric* lowerBack = gluNewQuadric();
+    gluSphere(lowerBack, 0.5, 16, 16);
+    gluDeleteQuadric(lowerBack);
+    glPopMatrix();
+
+    // Add lower back definition
+    glColor3fv(muscleDefinition);
+    glPushMatrix();
+    glTranslatef(0.0f, 6.95f, -0.35f);  // Deeper muscle groove
+    glScalef(0.5f, 0.2f, 0.15f);
+    GLUquadric* backDefinition = gluNewQuadric();
+    gluSphere(backDefinition, 0.5, 12, 12);
+    gluDeleteQuadric(backDefinition);
+    glPopMatrix();
+
+    // Side oblique muscles with depth variations
+    for (int side = -1; side <= 1; side += 2) {
+        // Main oblique muscle
+        if (side == -1) {
+            glColor3fv(wukongSkinMid);    // Left side mid-tone
+        }
+        else {
+            glColor3fv(wukongSkinLight);  // Right side highlighted
+        }
+
+        glPushMatrix();
+        glTranslatef(side * 0.4f, 7.1f, 0.0f);
+        glScalef(0.2f, 0.5f, 0.3f);
+        GLUquadric* oblique = gluNewQuadric();
+        gluSphere(oblique, 0.5, 14, 14);
+        gluDeleteQuadric(oblique);
+        glPopMatrix();
+
+        // Add oblique definition
+        glColor3fv(muscleDefinition);
+        glPushMatrix();
+        glTranslatef(side * 0.42f, 7.05f, -0.05f);
+        glScalef(0.12f, 0.3f, 0.18f);
+        GLUquadric* obliqueDefinition = gluNewQuadric();
+        gluSphere(obliqueDefinition, 0.5, 12, 12);
+        gluDeleteQuadric(obliqueDefinition);
+        glPopMatrix();
+
+        // Add oblique highlights
+        if (side == 1) {  // Only add highlight to the right side for asymmetry
+            glColor3fv(muscleHighlight);
+            glPushMatrix();
+            glTranslatef(side * 0.38f, 7.15f, 0.05f);
+            glScalef(0.08f, 0.2f, 0.12f);
+            GLUquadric* obliqueHighlight = gluNewQuadric();
+            gluSphere(obliqueHighlight, 0.5, 10, 10);
+            gluDeleteQuadric(obliqueHighlight);
+            glPopMatrix();
+        }
+    }
+
+    // Draw left leg with Black Myth Wukong styling
+    glPushMatrix();
+    glTranslatef(-0.7f, 0.0f, 0.0f);
+    drawBlackMythWukongCharacter(true);
+
+    // Position and draw left enhanced heritage combat boot
+    glPushMatrix();
+    glTranslatef(0.0f, 1.6f, 0.0f);
+    glScalef(1.1f, 1.2f, 1.1f);
+    drawEnhancedHeritageBootWithContrast(true);
+    glPopMatrix();
+    glPopMatrix();
+
+    // Draw right leg with Black Myth Wukong styling
+    glPushMatrix();
+    glTranslatef(0.7f, 0.0f, 0.0f);
+    drawBlackMythWukongCharacter(false);
+
+    // Position and draw right enhanced heritage combat boot
+    glPushMatrix();
+    glTranslatef(0.0f, 1.6f, 0.0f);
+    glScalef(1.1f, 1.2f, 1.1f);
+    drawEnhancedHeritageBootWithContrast(false);
+    glPopMatrix();
+    glPopMatrix();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow) {
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    ShowWindow(hWnd, nCmdShow);
+
+    // Initialize OpenGL
+    glEnable(GL_DEPTH_TEST);
+    setupLighting();
+    glMatrixMode(GL_PROJECTION);
+    gluPerspective(45.0f, 1024.0f / 768.0f, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glClearColor(0.2f, 0.15f, 0.15f, 1.0f); // Dark brown background
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true) {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return (int)msg.wParam;
+}

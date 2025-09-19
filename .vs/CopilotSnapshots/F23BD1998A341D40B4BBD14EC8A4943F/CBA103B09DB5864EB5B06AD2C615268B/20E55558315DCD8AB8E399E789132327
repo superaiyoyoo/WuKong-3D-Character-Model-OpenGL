@@ -1,0 +1,3467 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Black Myth Wukong - Armored Monkey King Warrior"
+#define PI 3.14159f
+
+// Global variables for camera control
+float rotationX = 10.0f;
+float rotationY = 0.0f;
+float zoom = -15.0f;
+
+// Forward declarations
+void drawWukongMuscularLeg(bool isLeft);
+void drawHighContrastArmoredPants(float legHeight);
+void drawWukongOuterArmorLayer(float legHeight);
+void drawEnhancedHeritageBootWithContrast(bool isLeft);
+void drawBlackMythWukongCharacter(bool isLeft);
+
+// Material utility functions for consistent material application
+void applyLeatherMaterial() {
+    GLfloat leatherAmbient[] = { 0.25f, 0.18f, 0.12f, 1.0f };
+    GLfloat leatherDiffuse[] = { 0.55f, 0.38f, 0.25f, 1.0f };
+    GLfloat leatherSpecular[] = { 0.3f, 0.25f, 0.2f, 1.0f };
+    GLfloat leatherShininess[] = { 8.0f };
+    
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, leatherAmbient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, leatherDiffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, leatherSpecular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, leatherShininess);
+}
+
+void applyRubberMaterial() {
+    GLfloat rubberAmbient[] = { 0.06f, 0.04f, 0.03f, 1.0f };
+    GLfloat rubberDiffuse[] = { 0.12f, 0.08f, 0.06f, 1.0f };
+    GLfloat rubberSpecular[] = { 0.05f, 0.05f, 0.05f, 1.0f };
+    GLfloat rubberShininess[] = { 2.0f };
+    
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, rubberAmbient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, rubberDiffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, rubberSpecular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, rubberShininess);
+}
+
+void applyMetalMaterial() {
+    GLfloat metalAmbient[] = { 0.3f, 0.3f, 0.32f, 1.0f };
+    GLfloat metalDiffuse[] = { 0.6f, 0.6f, 0.63f, 1.0f };
+    GLfloat metalSpecular[] = { 0.9f, 0.9f, 0.95f, 1.0f };
+    GLfloat metalShininess[] = { 128.0f };
+    
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, metalAmbient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, metalDiffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, metalSpecular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, metalShininess);
+}
+
+void applySmoothLeatherMaterial() {
+    GLfloat smoothAmbient[] = { 0.22f, 0.15f, 0.10f, 1.0f };
+    GLfloat smoothDiffuse[] = { 0.48f, 0.32f, 0.22f, 1.0f };
+    GLfloat smoothSpecular[] = { 0.4f, 0.3f, 0.25f, 1.0f };
+    GLfloat smoothShininess[] = { 25.0f };
+    
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, smoothAmbient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, smoothDiffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, smoothSpecular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, smoothShininess);
+}
+
+// Advanced procedural texture and detail functions
+void drawLeatherGrainTexture(float density, float scale) {
+    glDisable(GL_LIGHTING);
+    glPointSize(1.2f);
+    
+    glBegin(GL_POINTS);
+    // Create realistic leather grain pattern
+    for (int i = 0; i < (int)(density * 100); i++) {
+        float x = (sinf(i * 0.73f) + cosf(i * 0.47f)) * scale * 0.4f;
+        float y = (cosf(i * 0.61f) + sinf(i * 0.83f)) * scale * 1.2f;
+        float z = (sinf(i * 0.91f) + cosf(i * 0.37f)) * scale * 0.8f;
+        
+        // Only place grain within reasonable boot boundaries
+        if (x*x + z*z < scale*scale && y > -0.5f && y < 2.5f) {
+            // Vary grain color based on location for realism
+            float lightFactor = (x + z + y + 2.0f) * 0.15f;
+            glColor3f(0.48f + lightFactor * 0.1f, 
+                     0.32f + lightFactor * 0.08f, 
+                     0.22f + lightFactor * 0.06f);
+            glVertex3f(x, y, z + 0.1f);
+        }
+    }
+    glEnd();
+    glEnable(GL_LIGHTING);
+}
+
+void drawRealisticTreadPattern() {
+    glDisable(GL_LIGHTING);
+    glLineWidth(1.5f);
+    glColor3f(0.04f, 0.03f, 0.02f);
+    
+    // Horizontal grip channels
+    for (int i = 0; i < 15; i++) {
+        float z = -1.3f + (i * 0.18f);
+        glBegin(GL_LINES);
+        for (int j = 0; j < 10; j++) {
+            float x = -0.35f + (j * 0.07f);
+            // Vary line length for realistic wear
+            float lineLength = 0.04f + (sinf((float)(i + j)) * 0.01f);
+            glVertex3f(x, -0.92f, z);
+            glVertex3f(x + lineLength, -0.92f, z);
+        }
+        glEnd();
+    }
+    
+    // Diagonal flex grooves
+    for (int i = 0; i < 8; i++) {
+        float angle = i * 0.4f;
+        float x1 = -0.3f + cosf(angle) * 0.1f;
+        float z1 = -0.8f + sinf(angle) * 0.3f;
+        float x2 = 0.3f + cosf(angle) * 0.1f;
+        float z2 = 0.8f + sinf(angle) * 0.3f;
+        
+        glBegin(GL_LINES);
+        glVertex3f(x1, -0.92f, z1);
+        glVertex3f(x2, -0.92f, z2);
+        glEnd();
+    }
+    
+    // Heel and toe wear indicators
+    glColor3f(0.06f, 0.04f, 0.03f);
+    
+    // Heel wear circle
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i <= 16; i++) {
+        float angle = i * 2.0f * PI / 16.0f;
+        float x = sinf(angle) * 0.2f;
+        float z = cosf(angle) * 0.15f - 0.7f;
+        glVertex3f(x, -0.92f, z);
+    }
+    glEnd();
+    
+    // Toe wear arc
+    glBegin(GL_LINE_STRIP);
+    for (int i = 0; i <= 12; i++) {
+        float angle = (i - 6) * 0.15f;
+        float x = sinf(angle) * 0.25f;
+        float z = cosf(angle) * 0.2f + 0.6f;
+        glVertex3f(x, -0.92f, z);
+    }
+    glEnd();
+    
+    glLineWidth(1.0f);
+    glEnable(GL_LIGHTING);
+}
+
+void drawStitchingDetails() {
+    glDisable(GL_LIGHTING);
+    glLineWidth(2.2f);
+    
+    // Triple-stitch toe cap seam
+    for (int line = 0; line < 3; line++) {
+        float offset = (line - 1) * 0.02f;
+        glColor3f(0.58f + line * 0.03f, 0.44f + line * 0.02f, 0.32f + line * 0.02f);
+        
+        glBegin(GL_LINE_LOOP);
+        for (int i = 0; i <= 28; i++) {
+            float angle = (i - 14) * 0.08f;
+            float x = sinf(angle) * (0.68f + offset);
+            float y = -0.05f + line * 0.01f;
+            float z = cosf(angle) * 0.35f + 0.75f;
+            glVertex3f(x, y, z);
+        }
+        glEnd();
+    }
+    
+    // Side panel decorative stitching
+    glColor3f(0.60f, 0.46f, 0.34f);
+    for (int side = -1; side <= 1; side += 2) {
+        glBegin(GL_LINE_STRIP);
+        for (int i = 0; i < 12; i++) {
+            float y = -0.3f + i * 0.25f;
+            float x = side * (0.46f - i * 0.015f);
+            float z = 0.45f - i * 0.08f;
+            glVertex3f(x, y, z);
+        }
+        glEnd();
+        
+        // Decorative cross-stitching
+        for (int i = 0; i < 6; i++) {
+            float y = 0.2f + i * 0.3f;
+            glBegin(GL_LINES);
+            glVertex3f(side * 0.42f, y - 0.05f, 0.3f - i * 0.05f);
+            glVertex3f(side * 0.38f, y + 0.05f, 0.35f - i * 0.05f);
+            glEnd();
+        }
+    }
+    
+    glLineWidth(1.0f);
+    glEnable(GL_LIGHTING);
+}
+
+void drawMetallicAccents() {
+    // D-ring attachment points
+    applyMetalMaterial();
+    glColor3f(0.65f, 0.65f, 0.68f);
+    
+    for (int side = -1; side <= 1; side += 2) {
+        // D-ring body
+        glPushMatrix();
+        glTranslatef(side * 0.4f, 1.2f, 0.35f);
+        glRotatef(45, 0, 0, 1);
+        glScalef(0.06f, 0.04f, 0.02f);
+        GLUquadric* dring = gluNewQuadric();
+        gluCylinder(dring, 1.0f, 1.0f, 1.0f, 8, 1);
+        gluDeleteQuadric(dring);
+        glPopMatrix();
+        
+        // Attachment rivet
+        glColor3f(0.72f, 0.72f, 0.75f);
+        glPushMatrix();
+        glTranslatef(side * 0.38f, 1.15f, 0.38f);
+        glScalef(0.015f, 0.015f, 0.015f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 12, 12);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+    
+    // Heel counter reinforcement studs
+    glColor3f(0.68f, 0.68f, 0.71f);
+    for (int i = 0; i < 4; i++) {
+        float angle = i * PI / 2.0f;
+        float x = sinf(angle) * 0.25f;
+        float z = cosf(angle) * 0.15f - 0.6f;
+        
+        glPushMatrix();
+        glTranslatef(x, 0.1f, z);
+        glScalef(0.012f, 0.012f, 0.012f);
+        GLUquadric* stud = gluNewQuadric();
+        gluSphere(stud, 1.0f, 8, 8);
+        gluDeleteQuadric(stud);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// Function to draw Wukong-style muscular leg anatomy with enhanced color variations
+void drawWukongMuscularLeg(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Enhanced skin tones for Wukong with depth variations
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };           // Base golden-brown
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };         // Lighter highlights
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };           // Mid-tone areas
+    GLfloat wukongSkinDeep[] = { 0.68f, 0.53f, 0.28f, 1.0f };          // Deeper shadows
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };        // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };         // Muscle highlights
+
+    // --- ENHANCED UPPER THIGH (Much Larger and More Muscular) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main upper thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, 6.2f, 0.0f);
+    glScalef(0.85f, 1.4f, 0.85f);
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluSphere(upperThigh, 0.5, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+
+    // Quadriceps muscle definition with varying depths
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.3f;
+        // Vary colors based on position for depth
+        if (i == 0) glColor3fv(muscleDefinition);      // Deepest
+        else if (i == 1) glColor3fv(wukongSkinMid);    // Mid-tone
+        else glColor3fv(muscleHighlight);              // Highlighted
+
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.25f, 6.1f, cosf(angle) * 0.15f + 0.2f);
+        glScalef(0.15f, 0.6f, 0.2f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+
+    // --- ENHANCED MID THIGH (Larger and More Defined) ---
+    glColor3fv(wukongSkinLight);  // Lighter tone for prominence
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadric* midThigh = gluNewQuadric();
+    gluSphere(midThigh, 0.5, 20, 20);
+    gluDeleteQuadric(midThigh);
+    glPopMatrix();
+
+    // Hamstring muscle definition
+    glColor3fv(wukongSkinDeep);  // Deeper shadow tone
+    glPushMatrix();
+    glTranslatef(0.0f, 5.1f, -0.3f);
+    glScalef(0.6f, 0.8f, 0.25f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+
+    // --- ENHANCED KNEE AREA ---
+    glColor3fv(wukongSkinMid);  // Mid-tone for natural transition
+    glPushMatrix();
+    glTranslatef(0.0f, 4.3f, 0.0f);
+    glScalef(0.65f, 0.4f, 0.65f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+
+    // --- ENHANCED CALF MUSCLES (Much More Defined) ---
+    glColor3fv(wukongSkinBase);
+
+    // Main calf muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.8f, 0.1f);
+    glScalef(0.55f, 0.9f, 0.7f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5, 18, 18);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+
+    // Gastrocnemius muscle definition with highlights
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 3.7f, 0.2f);
+    glScalef(0.35f, 0.7f, 0.4f);
+    GLUquadric* gastrocnemius = gluNewQuadric();
+    gluSphere(gastrocnemius, 0.5, 14, 14);
+    gluDeleteQuadric(gastrocnemius);
+    glPopMatrix();
+
+    // Soleus muscle
+    glColor3fv(muscleDefinition);  // Deep muscle definition
+    glPushMatrix();
+    glTranslatef(0.0f, 3.5f, -0.1f);
+    glScalef(0.4f, 0.5f, 0.3f);
+    GLUquadric* soleus = gluNewQuadric();
+    gluSphere(soleus, 0.5, 14, 14);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+
+    // --- ENHANCED SHIN AREA ---
+    glColor3fv(wukongSkinMid);
+    glPushMatrix();
+    glTranslatef(0.0f, 3.2f, 0.3f);
+    glScalef(0.35f, 0.6f, 0.25f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5, 14, 14);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+// Enhanced function to draw high-contrast armored combat pants with depth variations
+void drawHighContrastArmoredPants(float legHeight) {
+    // Enhanced armored pants colors with depth variations
+    GLfloat pantsBase[] = { 0.08f, 0.06f, 0.04f, 1.0f };           // Base very dark fabric
+    GLfloat pantsHighlight[] = { 0.12f, 0.09f, 0.06f, 1.0f };      // Subtle highlights
+    GLfloat pantsDeep[] = { 0.05f, 0.03f, 0.02f, 1.0f };           // Deepest shadows
+    GLfloat armorBase[] = { 0.50f, 0.50f, 0.53f, 1.0f };           // Base steel gray
+    GLfloat armorLight[] = { 0.62f, 0.62f, 0.65f, 1.0f };          // Lighter armor highlights
+    GLfloat armorDeep[] = { 0.38f, 0.38f, 0.41f, 1.0f };           // Deeper armor shadows
+    GLfloat rivetBase[] = { 0.40f, 0.40f, 0.42f, 1.0f };           // Base rivet color
+    GLfloat rivetHighlight[] = { 0.52f, 0.52f, 0.54f, 1.0f };      // Highlighted rivets
+    GLfloat rivetShadow[] = { 0.28f, 0.28f, 0.30f, 1.0f };         // Shadow rivets
+
+    float pantsBottom = 4.2f;
+    float pantsTop = pantsBottom + legHeight;
+
+    // Draw main armored pants with depth variation
+    int segments = 24;
+    float angleStep = 2.0f * PI / segments;
+
+    glBegin(GL_TRIANGLE_STRIP);
+    for (int i = 0; i <= segments; i++) {
+        float angle = i * angleStep;
+        float x = cosf(angle);
+        float z = sinf(angle);
+
+        // Vary color based on position for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;  // 0 to 1 based on angle
+        if (lightFactor > 0.6f) {
+            glColor3fv(pantsHighlight);  // Highlighted areas
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(pantsDeep);       // Shadow areas
+        }
+        else {
+            glColor3fv(pantsBase);       // Base areas
+        }
+
+        float bottomRadius = 0.26f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * bottomRadius, pantsBottom, z * bottomRadius);
+
+        float topRadius = 0.55f;
+        glNormal3f(x, 0, z);
+        glVertex3f(x * topRadius, pantsTop, z * topRadius);
+    }
+    glEnd();
+
+    // --- ENHANCED KNEE ARMOR PLATE with depth variations ---
+    glColor3fv(armorBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 5.2f, 0.18f);
+    glScalef(0.35f, 0.25f, 0.12f);
+    GLUquadric* kneePlate = gluNewQuadric();
+    gluSphere(kneePlate, 1.0, 20, 16);
+    gluDeleteQuadric(kneePlate);
+    glPopMatrix();
+
+    // Add armor highlights and shadows
+    glColor3fv(armorLight);
+    glPushMatrix();
+    glTranslatef(0.05f, 5.25f, 0.22f);  // Slightly offset for highlight
+    glScalef(0.15f, 0.12f, 0.06f);
+    GLUquadric* kneeHighlight = gluNewQuadric();
+    gluSphere(kneeHighlight, 1.0, 12, 8);
+    gluDeleteQuadric(kneeHighlight);
+    glPopMatrix();
+
+    glColor3fv(armorDeep);
+    glPushMatrix();
+    glTranslatef(-0.05f, 5.15f, 0.16f);  // Shadow area
+    glScalef(0.12f, 0.10f, 0.05f);
+    GLUquadric* kneeShadow = gluNewQuadric();
+    gluSphere(kneeShadow, 1.0, 12, 8);
+    gluDeleteQuadric(kneeShadow);
+    glPopMatrix();
+
+    // Enhanced knee armor rivets with varied depth
+    for (int i = 0; i < 10; i++) {
+        float angle = i * 2.0f * PI / 10.0f;
+        float x = sinf(angle) * 0.28f;
+        float y = 5.2f + cosf(angle) * 0.18f;
+
+        // Vary rivet colors for depth
+        float lightFactor = (cosf(angle) + 1.0f) * 0.5f;
+        if (lightFactor > 0.6f) {
+            glColor3fv(rivetHighlight);
+        }
+        else if (lightFactor < 0.3f) {
+            glColor3fv(rivetShadow);
+        }
+        else {
+            glColor3fv(rivetBase);
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, 0.23f);
+        glScalef(0.02f, 0.02f, 0.02f);
+        GLUquadric* rivet = gluNewQuadric();
+        gluSphere(rivet, 1.0f, 8, 8);
+        gluDeleteQuadric(rivet);
+        glPopMatrix();
+    }
+}
+
+// --- ENHANCED CHARACTER MODELING ---
+// Function to draw the complete Black Myth Wukong character with all enhancements
+void drawBlackMythWukongCharacter(bool isLeft) {
+    glPushMatrix();
+
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Draw Wukong's enhanced muscular leg anatomy
+    drawWukongMuscularLeg(isLeft);
+
+    // Draw the original armored pants (now as inner layer)
+    drawHighContrastArmoredPants(3.5f);
+
+    // Draw the new ornate outer armor layer
+    drawWukongOuterArmorLayer(3.5f);
+
+    glPopMatrix();
+}
+
+// Enhanced lighting setup with multiple light sources for professional appearance
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_COLOR_MATERIAL);
+    glEnable(GL_NORMALIZE);
+    
+    // === MAIN KEY LIGHT (GL_LIGHT0) ===
+    glEnable(GL_LIGHT0);
+    GLfloat keyLightPos[] = { 4.0f, 6.0f, 8.0f, 1.0f };        // Primary light position
+    GLfloat keyLightAmbient[] = { 0.25f, 0.22f, 0.18f, 1.0f }; // Warm ambient
+    GLfloat keyLightDiffuse[] = { 1.0f, 0.95f, 0.85f, 1.0f };  // Bright warm diffuse
+    GLfloat keyLightSpecular[] = { 0.8f, 0.75f, 0.65f, 1.0f }; // Strong specular
+    
+    glLightfv(GL_LIGHT0, GL_POSITION, keyLightPos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, keyLightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, keyLightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, keyLightSpecular);
+    
+    // === FILL LIGHT (GL_LIGHT1) - Softens shadows ===
+    glEnable(GL_LIGHT1);
+    GLfloat fillLightPos[] = { -3.0f, 4.0f, 5.0f, 1.0f };      // Opposite side
+    GLfloat fillLightAmbient[] = { 0.15f, 0.15f, 0.18f, 1.0f }; // Cool ambient
+    GLfloat fillLightDiffuse[] = { 0.4f, 0.45f, 0.5f, 1.0f };  // Soft cool diffuse
+    GLfloat fillLightSpecular[] = { 0.2f, 0.25f, 0.3f, 1.0f }; // Subtle specular
+    
+    glLightfv(GL_LIGHT1, GL_POSITION, fillLightPos);
+    glLightfv(GL_LIGHT1, GL_AMBIENT, fillLightAmbient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, fillLightDiffuse);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, fillLightSpecular);
+    
+    // === RIM LIGHT (GL_LIGHT2) - Creates dramatic outline ===
+    glEnable(GL_LIGHT2);
+    GLfloat rimLightPos[] = { 0.0f, 8.0f, -6.0f, 1.0f };       // Behind character
+    GLfloat rimLightAmbient[] = { 0.05f, 0.05f, 0.08f, 1.0f }; // Minimal ambient
+    GLfloat rimLightDiffuse[] = { 0.6f, 0.55f, 0.45f, 1.0f };  // Warm rim diffuse
+    GLfloat rimLightSpecular[] = { 0.9f, 0.8f, 0.6f, 1.0f };   // Bright rim specular
+    
+    glLightfv(GL_LIGHT2, GL_POSITION, rimLightPos);
+    glLightfv(GL_LIGHT2, GL_AMBIENT, rimLightAmbient);
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, rimLightDiffuse);
+    glLightfv(GL_LIGHT2, GL_SPECULAR, rimLightSpecular);
+    
+    // === ENHANCED MATERIAL PROPERTIES ===
+    // Different materials will have different shininess values
+    GLfloat defaultShininess[] = { 15.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, defaultShininess);
+    
+    // Enable color material for easy color changes
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_ESCAPE: PostQuitMessage(0); break;
+        case VK_LEFT:   rotationY -= 5.0f; break;
+        case VK_RIGHT:  rotationY += 5.0f; break;
+        case VK_UP:     rotationX -= 5.0f; break;
+        case VK_DOWN:   rotationX += 5.0f; break;
+        case 'W':       zoom += 0.5f; break;
+        case 'S':       zoom -= 0.5f; break;
+        }
+        break;
+
+    default:
+        break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc) {
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // Camera setup optimized for the mighty Wukong
+    glTranslatef(0.0f, -4.0f, zoom);
+    glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+    glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+    // Enhanced Wukong skin tones with depth variations for waist and hip
+    GLfloat wukongSkinBase[] = { 0.85f, 0.7f, 0.45f, 1.0f };     // Base skin tone
+    GLfloat wukongSkinLight[] = { 0.92f, 0.78f, 0.52f, 1.0f };   // Highlighted areas
+    GLfloat wukongSkinMid[] = { 0.78f, 0.63f, 0.38f, 1.0f };     // Mid-tone areas
+    GLfloat muscleDefinition[] = { 0.58f, 0.43f, 0.23f, 1.0f };  // Deep muscle definition
+    GLfloat muscleHighlight[] = { 0.88f, 0.73f, 0.48f, 1.0f };   // Muscle highlights
+
+    // Enhanced hip area with depth variation
+    glColor3fv(wukongSkinBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 7.2f, 0.0f);
+    glScalef(1.0f, 0.8f, 0.7f);
+    GLUquadric* hip = gluNewQuadric();
+    gluSphere(hip, 0.5, 20, 20);
+    gluDeleteQuadric(hip);
+    glPopMatrix();
+
+    // Add hip highlights
+    glColor3fv(wukongSkinLight);
+    glPushMatrix();
+    glTranslatef(0.15f, 7.25f, 0.1f);  // Front-right highlight
+    glScalef(0.4f, 0.3f, 0.25f);
+    GLUquadric* hipHighlight = gluNewQuadric();
+    gluSphere(hipHighlight, 0.5, 16, 12);
+    gluDeleteQuadric(hipHighlight);
+    glPopMatrix();
+
+    // Add hip shadows
+    glColor3fv(muscleDefinition);
+    glPushMatrix();
+    glTranslatef(-0.15f, 7.15f, -0.1f);  // Back-left shadow
+    glScalef(0.35f, 0.25f, 0.2f);
+    GLUquadric* hipShadow = gluNewQuadric();
+    gluSphere(hipShadow, 0.5, 16, 12);
+    gluDeleteQuadric(hipShadow);
+    glPopMatrix();
+
+    // Lower back muscles with enhanced depth
+    glColor3fv(muscleHighlight);  // Highlighted muscle
+    glPushMatrix();
+    glTranslatef(0.0f, 7.0f, -0.3f);
+    glScalef(0.7f, 0.4f, 0.3f);
+    GLUquadric* lowerBack = gluNewQuadric();
+    gluSphere(lowerBack, 0.5, 16, 16);
+    gluDeleteQuadric(lowerBack);
+    glPopMatrix();
+
+    // Add lower back definition
+    glColor3fv(muscleDefinition);
+    glPushMatrix();
+    glTranslatef(0.0f, 6.95f, -0.35f);  // Deeper muscle groove
+    glScalef(0.5f, 0.2f, 0.15f);
+    GLUquadric* backDefinition = gluNewQuadric();
+    gluSphere(backDefinition, 0.5, 12, 12);
+    gluDeleteQuadric(backDefinition);
+    glPopMatrix();
+
+    // Side oblique muscles with depth variations
+    for (int side = -1; side <= 1; side += 2) {
+        // Main oblique muscle
+        if (side == -1) {
+            glColor3fv(wukongSkinMid);    // Left side mid-tone
+        }
+        else {
+            glColor3fv(wukongSkinLight);  // Right side highlighted
+        }
+
+        glPushMatrix();
+        glTranslatef(side * 0.4f, 7.1f, 0.0f);
+        glScalef(0.2f, 0.5f, 0.3f);
+        GLUquadric* oblique = gluNewQuadric();
+        gluSphere(oblique, 0.5, 14, 14);
+        gluDeleteQuadric(oblique);
+        glPopMatrix();
+
+        // Add oblique definition
+        glColor3fv(muscleDefinition);
+        glPushMatrix();
+        glTranslatef(side * 0.42f, 7.05f, -0.05f);
+        glScalef(0.12f, 0.3f, 0.18f);
+        GLUquadric* obliqueDefinition = gluNewQuadric();
+        gluSphere(obliqueDefinition, 0.5, 12, 12);
+        gluDeleteQuadric(obliqueDefinition);
+        glPopMatrix();
+
+        // Add oblique highlights
+        if (side == 1) {  // Only add highlight to the right side for asymmetry
+            glColor3fv(muscleHighlight);
+            glPushMatrix();
+            glTranslatef(side * 0.38f, 7.15f, 0.05f);
+            glScalef(0.08f, 0.2f, 0.12f);
+            GLUquadric* obliqueHighlight = gluNewQuadric();
+            gluSphere(obliqueHighlight, 0.5, 10, 10);
+            gluDeleteQuadric(obliqueHighlight);
+            glPopMatrix();
+        }
+    }
+
+    // Draw left leg with Black Myth Wukong styling
+    glPushMatrix();
+    glTranslatef(-0.7f, 0.0f, 0.0f);
+    drawBlackMythWukongCharacter(true);
+
+    // Position and draw left enhanced heritage combat boot
+    glPushMatrix();
+    glTranslatef(0.0f, 1.6f, 0.0f);
+    glScalef(1.1f, 1.2f, 1.1f);
+    drawEnhancedHeritageBootWithContrast(true);
+    glPopMatrix();
+    glPopMatrix();
+
+    // Draw right leg with Black Myth Wukong styling
+    glPushMatrix();
+    glTranslatef(0.7f, 0.0f, 0.0f);
+    drawBlackMythWukongCharacter(false);
+
+    // Position and draw right enhanced heritage combat boot
+    glPushMatrix();
+    glTranslatef(0.0f, 1.6f, 0.0f);
+    glScalef(1.1f, 1.2f, 1.1f);
+    drawEnhancedHeritageBootWithContrast(false);
+    glPopMatrix();
+    glPopMatrix();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow) {
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    ShowWindow(hWnd, nCmdShow);
+
+    // Initialize OpenGL
+    glEnable(GL_DEPTH_TEST);
+    setupLighting();
+    glMatrixMode(GL_PROJECTION);
+    gluPerspective(45.0f, 1024.0f / 768.0f, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glClearColor(0.2f, 0.15f, 0.15f, 1.0f); // Dark brown background
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true) {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return (int)msg.wParam;
+}

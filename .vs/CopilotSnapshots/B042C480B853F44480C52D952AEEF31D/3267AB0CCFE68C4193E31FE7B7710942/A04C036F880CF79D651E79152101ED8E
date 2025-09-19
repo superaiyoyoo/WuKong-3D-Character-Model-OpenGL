@@ -1,0 +1,370 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+
+#define WINDOW_TITLE "OpenGL Window"
+
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+
+	case WM_KEYDOWN:
+		if (wParam == VK_ESCAPE) PostQuitMessage(0);
+		break;
+
+	default:
+		break;
+	}
+
+	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+//--------------------------------------------------------------------
+
+bool initPixelFormat(HDC hdc)
+{
+	PIXELFORMATDESCRIPTOR pfd;
+	ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+	pfd.cAlphaBits = 8;
+	pfd.cColorBits = 32;
+	pfd.cDepthBits = 24;
+	pfd.cStencilBits = 0;
+
+	pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+	pfd.iLayerType = PFD_MAIN_PLANE;
+	pfd.iPixelType = PFD_TYPE_RGBA;
+	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pfd.nVersion = 1;
+
+	// choose pixel format returns the number most similar pixel format available
+	int n = ChoosePixelFormat(hdc, &pfd);
+
+	// set pixel format returns whether it sucessfully set the pixel format
+	if (SetPixelFormat(hdc, n, &pfd))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+// Leg vertex data - organized by leg parts
+static float leftThighVertices[][3] = {
+    {0.186710f, 0.046789f, -0.152419f}, {0.182664f, 0.048643f, -0.148659f},
+    {0.182664f, 0.048644f, 0.148649f}, {0.186710f, 0.046790f, 0.152410f},
+    {-0.112576f, 0.165099f, -0.225154f}, {-0.058713f, 0.167939f, -0.285015f},
+    {-0.129838f, 0.033507f, -0.229797f}, {0.065388f, 0.012473f, -0.323480f},
+    {0.132356f, 0.086115f, -0.284650f}, {0.006185f, 0.174758f, -0.188300f},
+    {-0.104170f, 0.162096f, -0.223809f}, {-0.141420f, 0.029810f, -0.222231f},
+    {0.072714f, 0.037085f, -0.178608f}, {0.153914f, 0.051286f, -0.173266f},
+    {0.075674f, 0.039971f, -0.180871f}, {0.173389f, 0.042701f, -0.158801f}
+};
+
+static float rightThighVertices[][3] = {
+    {-0.126524f, 0.019984f, -0.171901f}, {-0.108844f, 0.031649f, -0.273682f},
+    {0.147139f, 0.013650f, -0.305964f}, {0.135216f, 0.026226f, -0.203351f},
+    {0.249490f, 0.028596f, -0.248174f}, {0.255020f, 0.025997f, -0.292763f},
+    {0.164914f, 0.015878f, -0.253404f}, {0.280628f, 0.020239f, -0.300688f},
+    {0.286323f, 0.004207f, -0.298083f}, {0.247288f, 0.033443f, -0.337884f},
+    {0.256918f, 0.004581f, -0.336754f}, {-0.112576f, 0.165099f, 0.225143f},
+    {-0.129838f, 0.033508f, 0.229787f}, {0.181454f, 0.014520f, 0.350569f},
+    {-0.058713f, 0.167940f, 0.285005f}, {0.059239f, 0.015699f, 0.321819f}
+};
+
+static float leftCalfVertices[][3] = {
+    {0.173388f, 0.042701f, 0.158791f}, {0.135215f, 0.026226f, 0.203341f},
+    {0.164914f, 0.015879f, 0.253394f}, {0.249490f, 0.028597f, 0.248164f},
+    {0.281938f, 0.025972f, 0.300788f}, {0.286323f, 0.004208f, 0.298072f},
+    {0.247288f, 0.033443f, 0.337874f}, {0.256919f, 0.004581f, 0.336744f},
+    {0.200080f, 0.018059f, -0.352562f}, {0.210452f, 0.006730f, -0.352681f},
+    {0.182313f, 0.027029f, -0.158296f}, {0.212181f, 0.025725f, -0.154046f},
+    {-0.141420f, 0.029811f, 0.222221f}, {-0.104170f, 0.162096f, 0.223798f},
+    {0.006185f, 0.174758f, 0.188290f}, {0.132325f, 0.030873f, 0.200548f}
+};
+
+static float rightCalfVertices[][3] = {
+    {0.166361f, 0.039998f, 0.145097f}, {0.072715f, 0.037086f, 0.178599f},
+    {0.153915f, 0.051288f, 0.173257f}, {0.186690f, 0.031955f, 0.168204f},
+    {0.243317f, 0.021953f, 0.244270f}, {0.244399f, 0.022360f, 0.248501f},
+    {0.233946f, 0.039889f, 0.241893f}, {0.176575f, 0.022318f, 0.255497f},
+    {0.243202f, 0.025919f, 0.294758f}, {0.189889f, 0.016553f, 0.292341f},
+    {0.229750f, 0.038423f, 0.311433f}, {0.225411f, 0.015132f, 0.327693f},
+    {0.222037f, 0.034383f, 0.339835f}, {0.177808f, 0.015746f, 0.335938f},
+    {0.181223f, 0.029378f, 0.354565f}, {0.210452f, 0.006731f, 0.352671f}
+};
+
+static float leftFootVertices[][3] = {
+    {0.013652f, 0.473578f, 0.118506f}, {0.041785f, 0.630661f, 0.213060f},
+    {0.061628f, 0.515146f, 0.125722f}, {0.084412f, 0.582835f, 0.251950f},
+    {0.064993f, 0.511447f, 0.262646f}, {-0.019095f, 0.483501f, 0.348123f},
+    {-0.032019f, 0.636107f, 0.291181f}, {-0.109409f, 0.524775f, 0.347316f},
+    {-0.111461f, 0.449837f, 0.303037f}, {-0.186657f, 0.536703f, 0.259478f},
+    {-0.143480f, 0.624757f, 0.211473f}, {-0.169227f, 0.419824f, 0.198122f},
+    {-0.147887f, 0.424758f, 0.285362f}, {-0.118429f, 0.449641f, 0.075606f},
+    {-0.066434f, 0.625852f, 0.115359f}, {0.004284f, 0.478872f, 0.099087f}
+};
+
+static float rightFootVertices[][3] = {
+    {0.013652f, 0.473578f, -0.118504f}, {0.041786f, 0.630660f, -0.213058f},
+    {0.061629f, 0.515145f, -0.125720f}, {0.084412f, 0.582834f, -0.251948f},
+    {0.064993f, 0.511446f, -0.262644f}, {-0.019095f, 0.483499f, -0.348120f},
+    {-0.109409f, 0.524774f, -0.347313f}, {-0.032018f, 0.636106f, -0.291179f},
+    {-0.111460f, 0.449836f, -0.303034f}, {-0.186656f, 0.536701f, -0.259475f},
+    {-0.147885f, 0.424756f, -0.285358f}, {-0.169228f, 0.419823f, -0.198121f},
+    {-0.143479f, 0.624756f, -0.211470f}, {-0.118428f, 0.449641f, -0.075604f},
+    {0.004284f, 0.478871f, -0.099084f}, {-0.066433f, 0.625851f, -0.115357f}
+};
+
+void drawLegPart(float vertices[][3], int vertexCount, float r, float g, float b)
+{
+    glColor3f(r, g, b);
+    
+    // Draw as triangle fan from center for better geometry
+    glBegin(GL_TRIANGLE_FAN);
+    
+    // Calculate center point
+    float centerX = 0.0f, centerY = 0.0f, centerZ = 0.0f;
+    for (int i = 0; i < vertexCount; i++) {
+        centerX += vertices[i][0];
+        centerY += vertices[i][1];
+        centerZ += vertices[i][2];
+    }
+    centerX /= vertexCount;
+    centerY /= vertexCount;
+    centerZ /= vertexCount;
+    
+    // Center vertex
+    glVertex3f(centerX, centerY, centerZ);
+    
+    // Draw vertices around the center
+    for (int i = 0; i <= vertexCount; i++) {
+        int idx = i % vertexCount;
+        glVertex3f(vertices[idx][0], vertices[idx][1], vertices[idx][2]);
+    }
+    
+    glEnd();
+    
+    // Draw outline for better definition
+    glColor3f(r * 0.8f, g * 0.8f, b * 0.8f);
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < vertexCount; i++) {
+        glVertex3f(vertices[i][0], vertices[i][1], vertices[i][2]);
+    }
+    glEnd();
+}
+
+void drawConnectingCylinder(float x1, float y1, float z1, float x2, float y2, float z2, float radius, int segments)
+{
+    glBegin(GL_QUAD_STRIP);
+    
+    for (int i = 0; i <= segments; i++) {
+        float angle = (float)i / segments * 2.0f * 3.14159f;
+        float cos_angle = cos(angle);
+        float sin_angle = sin(angle);
+        
+        // First vertex (bottom)
+        glVertex3f(x1 + radius * cos_angle, y1, z1 + radius * sin_angle);
+        // Second vertex (top)
+        glVertex3f(x2 + radius * cos_angle, y2, z2 + radius * sin_angle);
+    }
+    
+    glEnd();
+}
+
+// Global variables for animation
+static float legRotation = 0.0f;
+static float walkCycle = 0.0f;
+
+void drawHumanLegs()
+{
+    // Enable depth testing for proper 3D rendering
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    
+    // Clear the screen
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // Set up the view
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glFrustum(-1.0, 1.0, -1.0, 1.0, 1.0, 100.0);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glTranslatef(0.0f, -0.5f, -3.0f);
+    glRotatef(20.0f, 1.0f, 0.0f, 0.0f); // Slight tilt for better view
+    
+    // Scale down the model for better viewing
+    glScalef(3.0f, 3.0f, 3.0f);
+    
+    // Animate walking cycle
+    walkCycle += 0.05f;
+    if (walkCycle > 6.28f) walkCycle = 0.0f; // Reset after full cycle
+    
+    // Draw left leg
+    glPushMatrix();
+    glTranslatef(-0.15f, 0.0f, 0.0f); // Position left leg
+    glRotatef(sin(walkCycle) * 15.0f, 1.0f, 0.0f, 0.0f); // Walking animation
+    
+    // Left thigh (skin tone)
+    glPushMatrix();
+    glTranslatef(0.0f, 0.2f, 0.0f);
+    drawLegPart(leftThighVertices, sizeof(leftThighVertices) / sizeof(leftThighVertices[0]), 0.9f, 0.7f, 0.5f);
+    glPopMatrix();
+    
+    // Left calf
+    glPushMatrix();
+    glTranslatef(0.0f, -0.1f, 0.0f);
+    glRotatef(abs(sin(walkCycle)) * 10.0f, 1.0f, 0.0f, 0.0f); // Knee bend
+    drawLegPart(leftCalfVertices, sizeof(leftCalfVertices) / sizeof(leftCalfVertices[0]), 0.85f, 0.65f, 0.45f);
+    glPopMatrix();
+    
+    // Left foot
+    glPushMatrix();
+    glTranslatef(0.0f, -0.4f, 0.1f);
+    drawLegPart(leftFootVertices, sizeof(leftFootVertices) / sizeof(leftFootVertices[0]), 0.8f, 0.6f, 0.4f);
+    glPopMatrix();
+    
+    glPopMatrix();
+    
+    // Draw right leg
+    glPushMatrix();
+    glTranslatef(0.15f, 0.0f, 0.0f); // Position right leg
+    glRotatef(sin(walkCycle + 3.14f) * 15.0f, 1.0f, 0.0f, 0.0f); // Opposite phase walking
+    
+    // Right thigh (skin tone)
+    glPushMatrix();
+    glTranslatef(0.0f, 0.2f, 0.0f);
+    drawLegPart(rightThighVertices, sizeof(rightThighVertices) / sizeof(rightThighVertices[0]), 0.9f, 0.7f, 0.5f);
+    glPopMatrix();
+    
+    // Right calf
+    glPushMatrix();
+    glTranslatef(0.0f, -0.1f, 0.0f);
+    glRotatef(abs(sin(walkCycle + 3.14f)) * 10.0f, 1.0f, 0.0f, 0.0f); // Knee bend
+    drawLegPart(rightCalfVertices, sizeof(rightCalfVertices) / sizeof(rightCalfVertices[0]), 0.85f, 0.65f, 0.45f);
+    glPopMatrix();
+    
+    // Right foot
+    glPushMatrix();
+    glTranslatef(0.0f, -0.4f, 0.1f);
+    drawLegPart(rightFootVertices, sizeof(rightFootVertices) / sizeof(rightFootVertices[0]), 0.8f, 0.6f, 0.4f);
+    glPopMatrix();
+    
+    glPopMatrix();
+    
+    // Draw joints for more realistic appearance
+    glColor3f(0.9f, 0.7f, 0.5f);
+    
+    // Hip joints
+    glPushMatrix();
+    glTranslatef(-0.15f, 0.3f, 0.0f);
+    drawConnectingCylinder(0.0f, 0.0f, 0.0f, 0.0f, -0.1f, 0.0f, 0.03f, 8);
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(0.15f, 0.3f, 0.0f);
+    drawConnectingCylinder(0.0f, 0.0f, 0.0f, 0.0f, -0.1f, 0.0f, 0.03f, 8);
+    glPopMatrix();
+    
+    // Knee joints
+    glColor3f(0.85f, 0.65f, 0.45f);
+    glPushMatrix();
+    glTranslatef(-0.15f, -0.05f, 0.0f);
+    drawConnectingCylinder(0.0f, 0.0f, 0.0f, 0.0f, -0.1f, 0.0f, 0.025f, 8);
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(0.15f, -0.05f, 0.0f);
+    drawConnectingCylinder(0.0f, 0.0f, 0.0f, 0.0f, -0.1f, 0.0f, 0.025f, 8);
+    glPopMatrix();
+    
+    // Ankle joints
+    glColor3f(0.8f, 0.6f, 0.4f);
+    glPushMatrix();
+    glTranslatef(-0.15f, -0.35f, 0.0f);
+    drawConnectingCylinder(0.0f, 0.0f, 0.0f, 0.0f, -0.05f, 0.1f, 0.02f, 8);
+    glPopMatrix();
+    
+    glPushMatrix();
+    glTranslatef(0.15f, -0.35f, 0.0f);
+    drawConnectingCylinder(0.0f, 0.0f, 0.0f, 0.0f, -0.05f, 0.1f, 0.02f, 8);
+    glPopMatrix();
+}
+
+void display()
+{
+    drawHumanLegs();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+	WNDCLASSEX wc;
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.lpfnWndProc = WindowProcedure;
+	wc.lpszClassName = WINDOW_TITLE;
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+
+	if (!RegisterClassEx(&wc)) return false;
+
+	HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+		NULL, NULL, wc.hInstance, NULL);
+
+	//--------------------------------
+	//	Initialize window for OpenGL
+	//--------------------------------
+
+	HDC hdc = GetDC(hWnd);
+
+	//	initialize pixel format for the window
+	initPixelFormat(hdc);
+
+	//	get an openGL context
+	HGLRC hglrc = wglCreateContext(hdc);
+
+	//	make context current
+	if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+	//--------------------------------
+	//	End initialization
+	//--------------------------------
+
+	ShowWindow(hWnd, nCmdShow);
+
+	MSG msg;
+	ZeroMemory(&msg, sizeof(msg));
+
+	while (true)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) break;
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		display();
+
+		SwapBuffers(hdc);
+	}
+
+	UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+	return true;
+}
+//--------------------------------------------------------------------

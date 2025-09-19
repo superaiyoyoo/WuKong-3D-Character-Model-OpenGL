@@ -1,0 +1,797 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Monkey Tail - Black Myth Wukong"
+#define PI 3.14159f
+
+// Global variables for camera control
+float rotationX = 10.0f;
+float rotationY = 0.0f;
+float zoom = -8.0f;
+
+// Animation variables for realistic tail movement
+float animationTime = 0.0f;
+
+// Forward declarations
+void drawMonkeyTail();
+void drawFurStrand(float length, float thickness, float curvature);
+void drawMuscleDefinition(float radius, float length, float t);
+void drawAuthenticMonkeyLeg(bool isLeft);
+void drawMonkeyHip();
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+
+	case WM_KEYDOWN:
+		switch (wParam) {
+		case VK_ESCAPE: PostQuitMessage(0); break;
+		case VK_LEFT:   rotationY -= 5.0f; break;
+		case VK_RIGHT:  rotationY += 5.0f; break;
+		case VK_UP:     rotationX -= 5.0f; break;
+		case VK_DOWN:   rotationX += 5.0f; break;
+		case 'W':       zoom += 0.5f; break;
+		case 'S':       zoom -= 0.5f; break;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc)
+{
+	PIXELFORMATDESCRIPTOR pfd;
+	ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+	pfd.cAlphaBits = 8;
+	pfd.cColorBits = 32;
+	pfd.cDepthBits = 24;
+	pfd.cStencilBits = 0;
+
+	pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+	pfd.iLayerType = PFD_MAIN_PLANE;
+	pfd.iPixelType = PFD_TYPE_RGBA;
+	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pfd.nVersion = 1;
+
+	// choose pixel format returns the number most similar pixel format available
+	int n = ChoosePixelFormat(hdc, &pfd);
+
+	// set pixel format returns whether it sucessfully set the pixel format
+	if (SetPixelFormat(hdc, n, &pfd))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+// Enhanced function to draw ultra-realistic monkey tail with authentic primate features
+void drawMonkeyTail() {
+    // Authentic monkey fur colors - based on real macaque and baboon patterns
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights  
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows
+    GLfloat furTip[] = { 0.25f, 0.15f, 0.08f, 1.0f };          // Very dark tip
+    GLfloat furUnderside[] = { 0.75f, 0.55f, 0.35f, 1.0f };    // Lighter underside
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };        // Pink skin patches
+    GLfloat muscleRidge[] = { 0.35f, 0.22f, 0.12f, 1.0f };     // Muscle definition
+    GLfloat vertebraeColor[] = { 0.38f, 0.25f, 0.15f, 1.0f };  // Vertebrae bumps
+    
+    // Anatomically accurate monkey tail parameters
+    const int tailSegments = 45;  // More segments for ultra-smooth connection
+    float tailLength = 5.5f;       // Longer for authentic monkey proportions
+    float segmentLength = tailLength / tailSegments;
+    
+    // Natural primate movement patterns
+    animationTime += 0.012f;
+    float breathingMotion = sinf(animationTime * 0.35f) * 0.04f;
+    float naturalSway = sinf(animationTime * 0.2f) * 0.06f;
+    float prehensileMotion = sinf(animationTime * 0.18f) * 2.0f;  // Prehensile curling
+    float vertebralFlex = sinf(animationTime * 0.28f) * 1.5f;    // Vertebral flexibility
+    
+    glPushMatrix();
+    
+    // Position at anatomically correct monkey tail base
+    glTranslatef(0.0f, 0.9f, -0.6f);  // Further back for monkey anatomy
+    glRotatef(-20.0f, 1.0f, 0.0f, 0.0f); // Natural monkey tail angle
+    
+    // Draw authentic monkey tail with primate characteristics
+    for (int i = 0; i < tailSegments; i++) {
+        float t = (float)i / (tailSegments - 1);
+        
+        // Authentic monkey tail biomechanics
+        float gravity = t * t * t * 0.25f;  // Natural hanging under gravity
+        float prehensileEffect = t * t * 0.15f;  // Stronger at tip for grasping
+        float vertebralCurve = sinf(t * PI * 0.8f) * 0.18f;  // Natural spinal curve
+        
+        // Ultra-small step calculations for seamless monkey tail
+        float stepY = -vertebralCurve * 0.08f - gravity * 0.08f + breathingMotion * (1.0f - t);
+        float stepX = sinf(t * PI * 0.35f + naturalSway) * 0.06f * (1.0f - t * 0.5f);
+        float stepZ = -t * 0.08f + sinf(t * PI * 0.6f + prehensileMotion * t) * 0.04f;  // Prehensile curling
+        
+        // Authentic monkey tail tapering - very thick base, extremely thin tip
+        float baseRadius = 0.32f;  // Thicker base like real monkeys
+        float midRadius = 0.18f;   // Substantial mid-section
+        float tipRadius = 0.015f;  // Extremely thin tip for grasping
+        
+        float currentRadius;
+        if (t < 0.15f) {
+            // Very thick base section
+            currentRadius = baseRadius - (baseRadius - midRadius) * (t / 0.15f);
+        } else if (t < 0.75f) {
+            // Gradual mid-section taper
+            currentRadius = midRadius - (midRadius - tipRadius * 4.0f) * ((t - 0.15f) / 0.6f);
+        } else {
+            // Rapid taper to very thin prehensile tip
+            currentRadius = tipRadius * 4.0f - (tipRadius * 3.5f) * ((t - 0.75f) / 0.25f);
+        }
+        
+        // Calculate next radius for perfect connection
+        float nextT = (float)(i + 1) / (tailSegments - 1);
+        float nextRadius;
+        if (nextT < 0.15f) {
+            nextRadius = baseRadius - (baseRadius - midRadius) * (nextT / 0.15f);
+        } else if (nextT < 0.75f) {
+            nextRadius = midRadius - (midRadius - tipRadius * 4.0f) * ((nextT - 0.15f) / 0.6f);
+        } else {
+            nextRadius = tipRadius * 4.0f - (tipRadius * 3.5f) * ((nextT - 0.75f) / 0.25f);
+        }
+        if (i == tailSegments - 1) nextRadius = tipRadius;
+        
+        // Authentic monkey fur color patterns
+        float dorsalVentral = stepY + 1.0f;  // Dorsal-ventral color variation
+        float colorVariation = (sinf(t * PI * 6.0f) + 1.0f) * 0.5f;
+        float lightExposure = (dorsalVentral + stepX + 2.0f) / 4.0f;
+        
+        // Natural primate coloration
+        if (t > 0.9f) {
+            glColor3fv(furTip);  // Very dark tip
+        } else if (dorsalVentral < 0.3f) {
+            glColor3fv(furUnderside);  // Lighter underside (ventral)
+        } else if (lightExposure > 0.7f && colorVariation > 0.6f) {
+            glColor3fv(furLight);  // Sun-exposed areas
+        } else if (lightExposure < 0.3f || colorVariation < 0.25f) {
+            glColor3fv(furDark);   // Shadow areas and natural stripes
+        } else {
+            glColor3fv(furBase);   // Base monkey fur color
+        }
+        
+        glPushMatrix();
+        
+        // Move by ultra-small steps for seamless connection
+        glTranslatef(stepX, stepY, stepZ);
+        
+        // Add natural primate tail flexibility
+        glRotatef(vertebralFlex * t * 0.5f, 0, 0, 1);
+        glRotatef(prehensileMotion * t * t, 1, 0, 0);  // Curling motion
+        
+        // Calculate precise orientation for natural flow
+        if (i < tailSegments - 1) {
+            float nextGravity = nextT * nextT * nextT * 0.25f;
+            float nextPrehensile = nextT * nextT * 0.15f;
+            float nextVertebral = sinf(nextT * PI * 0.8f) * 0.18f;
+            float nextStepY = -nextVertebral * 0.08f - nextGravity * 0.08f + breathingMotion * (1.0f - nextT);
+            float nextStepX = sinf(nextT * PI * 0.35f + naturalSway) * 0.06f * (1.0f - nextT * 0.5f);
+            float nextStepZ = -nextT * 0.08f + sinf(nextT * PI * 0.6f + prehensileMotion * nextT) * 0.04f;
+            
+            float dirX = nextStepX - stepX;
+            float dirY = nextStepY - stepY;
+            float dirZ = nextStepZ - stepZ;
+            
+            if (dirX != 0 || dirY != 0 || dirZ != 0) {
+                float angleY = atan2f(dirX, dirZ) * 180.0f / PI;
+                float angleX = -atan2f(dirY, sqrtf(dirX*dirX + dirZ*dirZ)) * 180.0f / PI;
+                
+                glRotatef(angleY, 0, 1, 0);
+                glRotatef(angleX, 1, 0, 0);
+            }
+        }
+        
+        // Draw main tail segment with ultra-high detail
+        GLUquadric* segment = gluNewQuadric();
+        gluQuadricOrientation(segment, GLU_OUTSIDE);
+        gluQuadricNormals(segment, GLU_SMOOTH);
+        gluQuadricTexture(segment, GL_TRUE);
+        gluCylinder(segment, currentRadius, nextRadius, segmentLength, 24, 1);  // High resolution
+        
+        // Perfect end caps for seamless connection
+        if (i == 0) {
+            GLUquadric* baseCap = gluNewQuadric();
+            gluQuadricOrientation(baseCap, GLU_INSIDE);
+            gluDisk(baseCap, 0.0f, currentRadius, 24, 1);
+            gluDeleteQuadric(baseCap);
+        }
+        
+        if (i == tailSegments - 1) {
+            glPushMatrix();
+            glTranslatef(0.0f, 0.0f, segmentLength);
+            GLUquadric* endCap = gluNewQuadric();
+            gluQuadricOrientation(endCap, GLU_OUTSIDE);
+            gluDisk(endCap, 0.0f, nextRadius, 24, 1);
+            gluDeleteQuadric(endCap);
+            glPopMatrix();
+        }
+        
+        gluDeleteQuadric(segment);
+        
+        // Authentic monkey fur patterns
+        if (i % 2 == 0) {  // Every other segment for dense fur coverage
+            int furCount = (int)((1.0f - t * 0.6f) * 12);  // Dense fur at base
+            for (int j = 0; j < furCount; j++) {
+                float angle = j * 2.0f * PI / furCount;
+                float furOffset = (sinf(animationTime * 2.0f + j) + 1.0f) * 0.01f;  // Moving fur
+                float furRadius = currentRadius * (0.98f + furOffset);
+                float furX = cosf(angle) * furRadius;
+                float furY = sinf(angle) * furRadius;
+                float furZ = segmentLength * ((j % 3) * 0.3f + 0.2f);
+                
+                // Natural fur color variation
+                if (furY < 0) {
+                    glColor3fv(furUnderside);  // Lighter underside
+                } else if (j % 4 == 0) {
+                    glColor3fv(furLight);
+                } else if (j % 7 == 0) {
+                    glColor3fv(furDark);
+                }
+                
+                glPushMatrix();
+                glTranslatef(furX, furY, furZ);
+                
+                // Natural fur tufts
+                GLUquadric* furTuft = gluNewQuadric();
+                gluQuadricNormals(furTuft, GLU_SMOOTH);
+                float furSize = currentRadius * (0.05f + (j % 3) * 0.01f);
+                gluSphere(furTuft, furSize, 6, 6);
+                gluDeleteQuadric(furTuft);
+                glPopMatrix();
+            }
+        }
+        
+        // Vertebrae definition for anatomical accuracy
+        if (t < 0.6f && i % 4 == 0) {  // Vertebrae only on thicker sections
+            glColor3fv(vertebraeColor);
+            for (int v = 0; v < 4; v++) {
+                float vertAngle = v * PI / 2.0f;
+                float vertX = cosf(vertAngle) * currentRadius * 0.99f;
+                float vertY = sinf(vertAngle) * currentRadius * 0.99f;
+                
+                glPushMatrix();
+                glTranslatef(vertX, vertY, segmentLength * 0.5f);
+                GLUquadric* vertebra = gluNewQuadric();
+                gluSphere(vertebra, currentRadius * 0.03f, 6, 6);
+                gluDeleteQuadric(vertebra);
+                glPopMatrix();
+            }
+        }
+        
+        // Muscle definition with primate anatomy
+        if (t < 0.4f && i % 6 == 0) {  // Strong muscles at base
+            glColor3fv(muscleRidge);
+            for (int m = 0; m < 6; m++) {
+                float muscleAngle = m * PI / 3.0f;
+                float muscleX = cosf(muscleAngle) * currentRadius * 0.97f;
+                float muscleY = sinf(muscleAngle) * currentRadius * 0.97f;
+                
+                glPushMatrix();
+                glTranslatef(muscleX, muscleY, segmentLength * 0.4f);
+                GLUquadric* muscle = gluNewQuadric();
+                gluSphere(muscle, currentRadius * 0.035f, 6, 6);
+                gluDeleteQuadric(muscle);
+                glPopMatrix();
+            }
+        }
+        
+        // Skin patches (hairless areas) for realism
+        if (t > 0.7f && i % 8 == 0) {  // Skin patches near tip
+            glColor3fv(skinPink);
+            for (int s = 0; s < 3; s++) {
+                float skinAngle = s * 2.0f * PI / 3.0f;
+                float skinX = cosf(skinAngle) * currentRadius * 0.85f;
+                float skinY = sinf(skinAngle) * currentRadius * 0.85f;
+                
+                glPushMatrix();
+                glTranslatef(skinX, skinY, segmentLength * 0.6f);
+                GLUquadric* skinPatch = gluNewQuadric();
+                gluSphere(skinPatch, currentRadius * 0.02f, 8, 8);
+                gluDeleteQuadric(skinPatch);
+                glPopMatrix();
+            }
+        }
+        
+        glPopMatrix();
+        
+        // Move to next position for perfect continuity
+        glTranslatef(stepX, stepY, stepZ);
+    }
+    
+    // Authentic prehensile monkey tail tip
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, segmentLength);
+    
+    // Prehensile pad (like real monkey tails)
+    glColor3fv(skinPink);
+    GLUquadric* prehensileCore = gluNewQuadric();
+    gluSphere(prehensileCore, 0.025f, 16, 16);
+    gluDeleteQuadric(prehensileCore);
+    
+    // Sensitive fingertip-like ridges
+    for (int r = 0; r < 6; r++) {
+        float ridgeAngle = r * PI / 3.0f;
+        float ridgeX = cosf(ridgeAngle) * 0.02f;
+        float ridgeY = sinf(ridgeAngle) * 0.02f;
+        
+        glColor3fv(furTip);
+        glPushMatrix();
+        glTranslatef(ridgeX, ridgeY, 0.01f);
+        GLUquadric* ridge = gluNewQuadric();
+        gluSphere(ridge, 0.005f, 6, 6);
+        gluDeleteQuadric(ridge);
+        glPopMatrix();
+    }
+    
+    // Natural fur tuft with primate characteristics
+    for (int i = 0; i < 12; i++) {
+        float angle = i * 2.0f * PI / 12.0f;
+        float tufRadius = 0.04f + (i % 4) * 0.008f;
+        float tufX = cosf(angle) * tufRadius * (0.7f + sinf(animationTime * 1.5f + i) * 0.2f);
+        float tufY = sinf(angle) * tufRadius * (0.7f + cosf(animationTime * 1.5f + i) * 0.2f);
+        float tufZ = (i % 4) * 0.02f - 0.01f;
+        
+        // Natural color variation in tuft
+        if (i % 4 == 0) {
+            glColor3fv(furTip);
+        } else if (i % 4 == 1) {
+            glColor3fv(furDark);
+        } else if (i % 4 == 2) {
+            glColor3fv(furBase);
+        } else {
+            glColor3fv(furLight);
+        }
+        
+        glPushMatrix();
+        glTranslatef(tufX, tufY, tufZ);
+        glRotatef((i % 5) * 8.0f, 1, 1, 0);  // Natural curl
+        
+        // Fine tapered hair strands
+        GLUquadric* hairStrand = gluNewQuadric();
+        gluQuadricNormals(hairStrand, GLU_SMOOTH);
+        float strandLength = 0.06f + (i % 4) * 0.015f;
+        gluCylinder(hairStrand, 0.003f, 0.0005f, strandLength, 4, 1);
+        gluDeleteQuadric(hairStrand);
+        glPopMatrix();
+    }
+    
+    glPopMatrix();
+    glPopMatrix();
+}
+
+// Simplified helper function for fur strands with uniform color
+void drawFurStrand(float length, float thickness, float curvature) {
+    const int strandSegments = 3;  // Reduced for simplicity
+    
+    for (int i = 0; i < strandSegments; i++) {
+        float t = (float)i / strandSegments;
+        
+        // Apply slight curvature
+        float bend = sinf(t * PI * curvature) * length * 0.1f;
+        
+        glPushMatrix();
+        glTranslatef(bend, 0, t * length);
+        
+        float currentThickness = thickness * (1.0f - t * 0.3f);
+        
+        GLUquadric* strand = gluNewQuadric();
+        gluQuadricNormals(strand, GLU_SMOOTH);
+        gluCylinder(strand, currentThickness, currentThickness * 0.9f, length / strandSegments, 6, 1);
+        gluDeleteQuadric(strand);
+        
+        glPopMatrix();
+    }
+}
+
+// Simplified muscle definition with uniform color
+void drawMuscleDefinition(float radius, float length, float t) {
+    // Subtle muscle definition using same base color, just slightly darker
+    glColor3f(0.55f, 0.40f, 0.25f);  // Slightly darker version of main color
+    
+    for (int i = 0; i < 4; i++) {
+        float angle = i * PI / 2.0f;
+        float muscleX = cosf(angle) * radius * 0.95f;
+        float muscleY = sinf(angle) * radius * 0.95f;
+        
+        glPushMatrix();
+        glTranslatef(muscleX, muscleY, 0);
+        
+        GLUquadric* muscle = gluNewQuadric();
+        gluSphere(muscle, radius * 0.05f, 6, 6);
+        gluDeleteQuadric(muscle);
+        
+        glPopMatrix();
+    }
+    
+    // Restore main tail color
+    glColor3f(0.65f, 0.50f, 0.35f);
+}
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    GLfloat lightPos0[] = { 4.0f, 5.0f, 6.0f, 1.0f };
+    GLfloat lightAmbient0[] = { 0.3f, 0.25f, 0.2f, 1.0f };
+    GLfloat lightDiffuse0[] = { 0.95f, 0.9f, 0.8f, 1.0f };
+    GLfloat lightSpecular0[] = { 0.4f, 0.35f, 0.25f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+
+    GLfloat matShininess[] = { 12.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+void display()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+
+	// Camera setup for viewing the monkey tail
+	glTranslatef(0.0f, -2.0f, zoom);
+	glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+	glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+	// Draw the monkey tail
+	drawMonkeyTail();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+	WNDCLASSEX wc;
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.lpfnWndProc = WindowProcedure;
+	wc.lpszClassName = WINDOW_TITLE;
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+
+	if (!RegisterClassEx(&wc)) return false;
+
+	HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+		NULL, NULL, wc.hInstance, NULL);
+
+	//--------------------------------
+	//	Initialize window for OpenGL
+	//--------------------------------
+
+	HDC hdc = GetDC(hWnd);
+
+	//	initialize pixel format for the window
+	initPixelFormat(hdc);
+
+	//	get an openGL context
+	HGLRC hglrc = wglCreateContext(hdc);
+
+	//	make context current
+	if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+	//--------------------------------
+	//	End initialization
+	//--------------------------------
+
+	ShowWindow(hWnd, nCmdShow);
+
+	// Initialize OpenGL
+	glEnable(GL_DEPTH_TEST);
+	setupLighting();
+	glMatrixMode(GL_PROJECTION);
+	gluPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glClearColor(0.1f, 0.1f, 0.15f, 1.0f); // Dark blue background
+
+	MSG msg;
+	ZeroMemory(&msg, sizeof(msg));
+
+	while (true)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) break;
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		display();
+
+		SwapBuffers(hdc);
+	}
+
+	UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+	return true;
+}
+
+// Function to draw authentic monkey hip/pelvis area to connect with legs
+void drawMonkeyHip() {
+    // Use the same authentic monkey colors as the tail
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights  
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };        // Pink skin patches
+    GLfloat muscleRidge[] = { 0.35f, 0.22f, 0.12f, 1.0f };     // Muscle definition
+    
+    // Main hip area - powerful primate pelvis
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(0.0f, 1.2f, -0.3f);  // Position to connect with tail base
+    glScalef(1.8f, 0.8f, 1.2f);  // Wide, strong monkey hips
+    GLUquadric* hip = gluNewQuadric();
+    gluQuadricNormals(hip, GLU_SMOOTH);
+    gluSphere(hip, 0.6f, 20, 20);
+    gluDeleteQuadric(hip);
+    glPopMatrix();
+    
+    // Hip muscle definition - gluteal muscles
+    glColor3fv(muscleRidge);
+    for (int side = -1; side <= 1; side += 2) {
+        glPushMatrix();
+        glTranslatef(side * 0.7f, 1.1f, -0.1f);
+        glScalef(0.4f, 0.3f, 0.5f);
+        GLUquadric* glute = gluNewQuadric();
+        gluSphere(glute, 0.6f, 16, 16);
+        gluDeleteQuadric(glute);
+        glPopMatrix();
+    }
+    
+    // Add some authentic monkey fur patches
+    glColor3fv(furLight);
+    for (int i = 0; i < 8; i++) {
+        float angle = i * 2.0f * PI / 8.0f;
+        float x = cosf(angle) * 0.9f;
+        float z = sinf(angle) * 0.5f - 0.2f;
+        
+        glPushMatrix();
+        glTranslatef(x, 1.2f, z);
+        GLUquadric* furPatch = gluNewQuadric();
+        gluSphere(furPatch, 0.08f, 8, 8);
+        gluDeleteQuadric(furPatch);
+        glPopMatrix();
+    }
+}
+
+// Function to draw authentic monkey leg with proper primate anatomy
+void drawAuthenticMonkeyLeg(bool isLeft) {
+    glPushMatrix();
+    
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+    
+    // Same authentic monkey colors as the tail
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights  
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows
+    GLfloat furUnderside[] = { 0.75f, 0.55f, 0.35f, 1.0f };    // Lighter underside
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };        // Pink skin patches
+    GLfloat muscleRidge[] = { 0.35f, 0.22f, 0.12f, 1.0f };     // Muscle definition
+    
+    // Natural primate leg animation
+    float legSway = sinf(animationTime * 0.3f) * 0.05f;
+    float muscleFlex = sinf(animationTime * 0.4f) * 0.02f;
+    
+    // === UPPER THIGH (FEMUR) - Powerful monkey thigh ===
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(legSway, 0.0f, 0.0f);
+    glRotatef(5.0f, 1.0f, 0.0f, 0.0f);  // Slight forward angle like real monkeys
+    
+    // Main thigh muscle mass
+    glPushMatrix();
+    glTranslatef(0.0f, -0.5f, 0.0f);
+    glScalef(0.55f, 1.2f, 0.55f);  // Proportional to monkey anatomy
+    GLUquadric* upperThigh = gluNewQuadric();
+    gluQuadricNormals(upperThigh, GLU_SMOOTH);
+    gluSphere(upperThigh, 0.5f, 20, 20);
+    gluDeleteQuadric(upperThigh);
+    glPopMatrix();
+    
+    // Quadriceps muscle definition - monkeys have strong leg muscles
+    glColor3fv(muscleRidge);
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.4f;
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.2f, -0.4f + muscleFlex, cosf(angle) * 0.1f + 0.15f);
+        glScalef(0.12f, 0.4f, 0.15f);
+        GLUquadric* quad = gluNewQuadric();
+        gluSphere(quad, 0.5f, 12, 12);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+    
+    // Hamstring muscles at back of thigh
+    glColor3fv(furDark);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.4f, -0.25f);
+    glScalef(0.4f, 0.6f, 0.2f);
+    GLUquadric* hamstring = gluNewQuadric();
+    gluSphere(hamstring, 0.5f, 16, 16);
+    gluDeleteQuadric(hamstring);
+    glPopMatrix();
+    
+    glPopMatrix();  // End upper thigh transformations
+    
+    // === KNEE AREA - Monkey knee joint ===
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(legSway * 0.7f, -1.3f, 0.0f);
+    glScalef(0.45f, 0.3f, 0.45f);
+    GLUquadric* knee = gluNewQuadric();
+    gluSphere(knee, 0.5f, 16, 16);
+    gluDeleteQuadric(knee);
+    glPopMatrix();
+    
+    // Kneecap definition
+    glColor3fv(skinPink);
+    glPushMatrix();
+    glTranslatef(legSway * 0.7f, -1.3f, 0.2f);
+    glScalef(0.25f, 0.15f, 0.1f);
+    GLUquadric* kneecap = gluNewQuadric();
+    gluSphere(kneecap, 0.5f, 12, 12);
+    gluDeleteQuadric(kneecap);
+    glPopMatrix();
+    
+    // === LOWER LEG (TIBIA/FIBULA) - Monkey shin and calf ===
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(legSway * 0.5f, -2.2f, 0.0f);
+    glRotatef(-3.0f, 1.0f, 0.0f, 0.0f);  // Slight backward angle
+    
+    // Main lower leg
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    glScalef(0.4f, 0.9f, 0.4f);
+    GLUquadric* lowerLeg = gluNewQuadric();
+    gluQuadricNormals(lowerLeg, GLU_SMOOTH);
+    gluSphere(lowerLeg, 0.5f, 18, 18);
+    gluDeleteQuadric(lowerLeg);
+    glPopMatrix();
+    
+    // Calf muscle (gastrocnemius) - monkeys have prominent calf muscles
+    glColor3fv(furLight);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, 0.15f);
+    glScalef(0.3f, 0.6f, 0.25f);
+    GLUquadric* calf = gluNewQuadric();
+    gluSphere(calf, 0.5f, 14, 14);
+    gluDeleteQuadric(calf);
+    glPopMatrix();
+    
+    // Shin bone area
+    glColor3fv(furDark);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.1f, 0.25f);
+    glScalef(0.25f, 0.7f, 0.15f);
+    GLUquadric* shin = gluNewQuadric();
+    gluSphere(shin, 0.5f, 12, 12);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+    
+    glPopMatrix();  // End lower leg transformations
+    
+    // === ANKLE AREA - Transition to foot ===
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(legSway * 0.3f, -3.2f, 0.0f);
+    glScalef(0.35f, 0.25f, 0.35f);
+    GLUquadric* ankle = gluNewQuadric();
+    gluSphere(ankle, 0.5f, 14, 14);
+    gluDeleteQuadric(ankle);
+    glPopMatrix();
+    
+    // === MONKEY FUR DETAILS ===
+    // Add authentic monkey fur tufts on the legs
+    glColor3fv(furLight);
+    for (int segment = 0; segment < 3; segment++) {  // Upper, middle, lower leg
+        float segmentY = -0.5f - (segment * 1.0f);
+        int furCount = 8 - (segment * 2);  // Less fur toward the feet
+        
+        for (int j = 0; j < furCount; j++) {
+            float angle = j * 2.0f * PI / furCount;
+            float radius = 0.4f - (segment * 0.05f);
+            float furX = cosf(angle) * radius;
+            float furZ = sinf(angle) * radius;
+            
+            // Vary fur color naturally
+            if (j % 3 == 0) glColor3fv(furLight);
+            else if (j % 3 == 1) glColor3fv(furBase);
+            else glColor3fv(furDark);
+            
+            glPushMatrix();
+            glTranslatef(furX + legSway * 0.5f, segmentY, furZ);
+            GLUquadric* furTuft = gluNewQuadric();
+            float furSize = 0.03f + (j % 2) * 0.01f;
+            gluSphere(furTuft, furSize, 6, 6);
+            gluDeleteQuadric(furTuft);
+            glPopMatrix();
+        }
+    }
+    
+    // === MUSCLE DEFINITION ALONG THE LEG ===
+    glColor3fv(muscleRidge);
+    for (int i = 0; i < 4; i++) {  // Muscle groups along the leg
+        float y = -0.3f - (i * 0.7f);
+        float muscleSize = 0.8f - (i * 0.15f);  // Smaller muscles toward feet
+        
+        // Lateral muscles
+        glPushMatrix();
+        glTranslatef(0.3f * muscleSize, y, 0.0f);
+        glScalef(0.08f, 0.15f * muscleSize, 0.08f);
+        GLUquadric* lateralMuscle = gluNewQuadric();
+        gluSphere(lateralMuscle, 0.5f, 8, 8);
+        gluDeleteQuadric(lateralMuscle);
+        glPopMatrix();
+        
+        // Medial muscles
+        glPushMatrix();
+        glTranslatef(-0.3f * muscleSize, y, 0.0f);
+        glScalef(0.08f, 0.15f * muscleSize, 0.08f);
+        GLUquadric* medialMuscle = gluNewQuadric();
+        gluSphere(medialMuscle, 0.5f, 8, 8);
+        gluDeleteQuadric(medialMuscle);
+        glPopMatrix();
+    }
+    
+    // === SKIN PATCHES (HAIRLESS AREAS) ===
+    // Monkeys have some hairless patches, especially around joints
+    glColor3fv(skinPink);
+    
+    // Knee skin patch
+    glPushMatrix();
+    glTranslatef(0.0f, -1.3f, 0.3f);
+    glScalef(0.15f, 0.1f, 0.05f);
+    GLUquadric* kneeSkin = gluNewQuadric();
+    gluSphere(kneeSkin, 0.5f, 8, 8);
+    gluDeleteQuadric(kneeSkin);
+    glPopMatrix();
+    
+    // Ankle skin patches
+    for (int i = 0; i < 2; i++) {
+        float angle = i * PI;
+        float x = cosf(angle) * 0.2f;
+        float z = sinf(angle) * 0.1f;
+        
+        glPushMatrix();
+        glTranslatef(x, -3.2f, z + 0.2f);
+        glScalef(0.08f, 0.06f, 0.03f);
+        GLUquadric* ankleSkin = gluNewQuadric();
+        gluSphere(ankleSkin, 0.5f, 6, 6);
+        gluDeleteQuadric(ankleSkin);
+        glPopMatrix();
+    }
+    
+    glPopMatrix();  // End leg
+}

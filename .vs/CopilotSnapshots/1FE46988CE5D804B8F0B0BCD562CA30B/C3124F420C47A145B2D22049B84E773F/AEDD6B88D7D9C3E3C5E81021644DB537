@@ -1,0 +1,1216 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "3D Arm Model with Torso and Finger Control"
+
+// Body control structure (torso only)
+struct BodyControl {
+    // Torso
+    float torsoRotX, torsoRotY, torsoRotZ;
+};
+
+// Arm control structure
+struct ArmControl {
+    // Shoulder joint
+    float shoulderRotX, shoulderRotY, shoulderRotZ;
+    // Elbow joint
+    float elbowRot;
+    // Wrist joint
+    float wristRotX, wristRotY, wristRotZ;
+
+    // Finger controls (each finger has 3 joints)
+    // Thumb (2 joints + base)
+    float thumbBase, thumbMid, thumbTip;
+    // Index finger
+    float indexBase, indexMid, indexTip;
+    // Middle finger
+    float middleBase, middleMid, middleTip;
+    // Ring finger
+    float ringBase, ringMid, ringTip;
+    // Pinky finger
+    float pinkyBase, pinkyMid, pinkyTip;
+};
+
+// Leg control structure
+struct LegControl {
+    // Hip joint
+    float hipRotX, hipRotY, hipRotZ;
+    // Knee joint
+    float kneeRot;
+    // Ankle joint
+    float ankleRotX, ankleRotY, ankleRotZ;
+    
+    // Monkey toe controls (4 toes + thumb-like big toe)
+    // Big toe (opposable, like thumb)
+    float bigToeBase, bigToeMid, bigToeTip;
+    // Second toe
+    float secondToeBase, secondToeMid, secondToeTip;
+    // Middle toe
+    float middleToeBase, middleToeMid, middleToeTip;
+    // Fourth toe
+    float fourthToeBase, fourthToeMid, fourthToeTip;
+    // Little toe
+    float littleToeBase, littleToeMid, littleToeTip;
+};
+
+ArmControl leftArm = { -120,0,180 };
+ArmControl rightArm = { -120,0,180 };
+LegControl leftLeg = { 0 };
+LegControl rightLeg = { 0 };
+BodyControl body = { -90, 0, 180 };  
+
+
+// Add these animation variables after line 42 (after rotationSpeed declaration)
+float animationTime = 0.0f;
+float animationSpeed = 0.005f;
+bool animationEnabled = false;
+bool walkingAnimationEnabled = false;
+int selectedPart = 0; // 0=left arm, 1=right arm, 2=torso, 3=left leg, 4=right leg
+int selectedJoint = 0; // Which joint to control
+float rotationSpeed = 2.0f;
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    case WM_KEYDOWN:
+    {
+        switch (wParam)
+        {
+            // Part selection
+        case VK_TAB:
+            selectedPart = (selectedPart + 1) % 5; // Cycle through parts: left arm, right arm, torso, left leg, right leg
+            selectedJoint = 0; // Reset joint selection
+            break;
+
+            // Joint selection (1-9 keys)
+        case '1': selectedJoint = 0; break;
+        case '2': selectedJoint = 1; break;
+        case '3': selectedJoint = 2; break;
+        case '4': selectedJoint = 3; break;
+        case '5': selectedJoint = 4; break;
+        case '6': selectedJoint = 5; break;
+        case '7': selectedJoint = 6; break;
+        case '8': selectedJoint = 7; break;
+        case '9': selectedJoint = 8; break;
+        case '0': selectedJoint = 9; break;
+        case VK_OEM_MINUS: selectedJoint = 10; break;
+        case VK_OEM_PLUS: selectedJoint = 11; break;
+
+            // Rotation controls
+        case VK_LEFT:
+        case 'A':
+            if (selectedPart == 0) { // Left arm
+                ArmControl* currentArm = &leftArm;
+                switch (selectedJoint) {
+                case 0: currentArm->shoulderRotX -= rotationSpeed; break;
+                case 1: currentArm->shoulderRotY -= rotationSpeed; break;
+                case 2: currentArm->shoulderRotZ -= rotationSpeed; break;
+                case 3: currentArm->elbowRot -= rotationSpeed; break;
+                case 4: currentArm->wristRotX -= rotationSpeed; break;
+                case 5: currentArm->wristRotY -= rotationSpeed; break;
+                case 6: currentArm->wristRotZ -= rotationSpeed; break;
+                case 7: // Thumb
+                    currentArm->thumbBase -= rotationSpeed;
+                    currentArm->thumbMid -= rotationSpeed * 0.5f;
+                    currentArm->thumbTip -= rotationSpeed * 0.3f;
+                    break;
+                case 8: // Index
+                    currentArm->indexBase -= rotationSpeed;
+                    currentArm->indexMid -= rotationSpeed * 0.7f;
+                    currentArm->indexTip -= rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle
+                    currentArm->middleBase -= rotationSpeed;
+                    currentArm->middleMid -= rotationSpeed * 0.7f;
+                    currentArm->middleTip -= rotationSpeed * 0.5f;
+                    break;
+                case 10: // Ring
+                    currentArm->ringBase -= rotationSpeed;
+                    currentArm->ringMid -= rotationSpeed * 0.7f;
+                    currentArm->ringTip -= rotationSpeed * 0.5f;
+                    break;
+                case 11: // Pinky
+                    currentArm->pinkyBase -= rotationSpeed;
+                    currentArm->pinkyMid -= rotationSpeed * 0.7f;
+                    currentArm->pinkyTip -= rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 1) { // Right arm
+                ArmControl* currentArm = &rightArm;
+                switch (selectedJoint) {
+                case 0: currentArm->shoulderRotX -= rotationSpeed; break;
+                case 1: currentArm->shoulderRotY -= rotationSpeed; break;
+                case 2: currentArm->shoulderRotZ -= rotationSpeed; break;
+                case 3: currentArm->elbowRot -= rotationSpeed; break;
+                case 4: currentArm->wristRotX -= rotationSpeed; break;
+                case 5: currentArm->wristRotY -= rotationSpeed; break;
+                case 6: currentArm->wristRotZ -= rotationSpeed; break;
+                case 7: // Thumb
+                    currentArm->thumbBase -= rotationSpeed;
+                    currentArm->thumbMid -= rotationSpeed * 0.5f;
+                    currentArm->thumbTip -= rotationSpeed * 0.3f;
+                    break;
+                case 8: // Index
+                    currentArm->indexBase -= rotationSpeed;
+                    currentArm->indexMid -= rotationSpeed * 0.7f;
+                    currentArm->indexTip -= rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle
+                    currentArm->middleBase -= rotationSpeed;
+                    currentArm->middleMid -= rotationSpeed * 0.7f;
+                    currentArm->middleTip -= rotationSpeed * 0.5f;
+                    break;
+                case 10: // Ring
+                    currentArm->ringBase -= rotationSpeed;
+                    currentArm->ringMid -= rotationSpeed * 0.7f;
+                    currentArm->ringTip -= rotationSpeed * 0.5f;
+                    break;
+                case 11: // Pinky
+                    currentArm->pinkyBase -= rotationSpeed;
+                    currentArm->pinkyMid -= rotationSpeed * 0.7f;
+                    currentArm->pinkyTip -= rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 2) { // Torso
+                switch (selectedJoint) {
+                case 0: body.torsoRotX -= rotationSpeed; break;
+                case 1: body.torsoRotY -= rotationSpeed; break;
+                case 2: body.torsoRotZ -= rotationSpeed; break;
+                }
+            }
+            else if (selectedPart == 3) { // Left leg
+                LegControl* currentLeg = &leftLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX -= rotationSpeed; break;
+                case 1: currentLeg->hipRotY -= rotationSpeed; break;
+                case 2: currentLeg->hipRotZ -= rotationSpeed; break;
+                case 3: currentLeg->kneeRot -= rotationSpeed; break;
+                case 4: currentLeg->ankleRotX -= rotationSpeed; break;
+                case 5: currentLeg->ankleRotY -= rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ -= rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase -= rotationSpeed;
+                    currentLeg->bigToeMid -= rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip -= rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase -= rotationSpeed;
+                    currentLeg->secondToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase -= rotationSpeed;
+                    currentLeg->middleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase -= rotationSpeed;
+                    currentLeg->fourthToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase -= rotationSpeed;
+                    currentLeg->littleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 4) { // Right leg
+                LegControl* currentLeg = &rightLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX -= rotationSpeed; break;
+                case 1: currentLeg->hipRotY -= rotationSpeed; break;
+                case 2: currentLeg->hipRotZ -= rotationSpeed; break;
+                case 3: currentLeg->kneeRot -= rotationSpeed; break;
+                case 4: currentLeg->ankleRotX -= rotationSpeed; break;
+                case 5: currentLeg->ankleRotY -= rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ -= rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase -= rotationSpeed;
+                    currentLeg->bigToeMid -= rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip -= rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase -= rotationSpeed;
+                    currentLeg->secondToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase -= rotationSpeed;
+                    currentLeg->middleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase -= rotationSpeed;
+                    currentLeg->fourthToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip -= rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase -= rotationSpeed;
+                    currentLeg->littleToeMid -= rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip -= rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            break;
+
+        case VK_RIGHT:
+        case 'D':
+            if (selectedPart == 0) { // Left arm
+                ArmControl* currentArm = &leftArm;
+                switch (selectedJoint) {
+                case 0: currentArm->shoulderRotX += rotationSpeed; break;
+                case 1: currentArm->shoulderRotY += rotationSpeed; break;
+                case 2: currentArm->shoulderRotZ += rotationSpeed; break;
+                case 3: currentArm->elbowRot += rotationSpeed; break;
+                case 4: currentArm->wristRotX += rotationSpeed; break;
+                case 5: currentArm->wristRotY += rotationSpeed; break;
+                case 6: currentArm->wristRotZ += rotationSpeed; break;
+                case 7: // Thumb
+                    currentArm->thumbBase += rotationSpeed;
+                    currentArm->thumbMid += rotationSpeed * 0.5f;
+                    currentArm->thumbTip += rotationSpeed * 0.3f;
+                    break;
+                case 8: // Index
+                    currentArm->indexBase += rotationSpeed;
+                    currentArm->indexMid += rotationSpeed * 0.7f;
+                    currentArm->indexTip += rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle
+                    currentArm->middleBase += rotationSpeed;
+                    currentArm->middleMid += rotationSpeed * 0.7f;
+                    currentArm->middleTip += rotationSpeed * 0.5f;
+                    break;
+                case 10: // Ring
+                    currentArm->ringBase += rotationSpeed;
+                    currentArm->ringMid += rotationSpeed * 0.7f;
+                    currentArm->ringTip += rotationSpeed * 0.5f;
+                    break;
+                case 11: // Pinky
+                    currentArm->pinkyBase += rotationSpeed;
+                    currentArm->pinkyMid += rotationSpeed * 0.7f;
+                    currentArm->pinkyTip += rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 1) { // Right arm
+                ArmControl* currentArm = &rightArm;
+                switch (selectedJoint) {
+                case 0: currentArm->shoulderRotX += rotationSpeed; break;
+                case 1: currentArm->shoulderRotY += rotationSpeed; break;
+                case 2: currentArm->shoulderRotZ += rotationSpeed; break;
+                case 3: currentArm->elbowRot += rotationSpeed; break;
+                case 4: currentArm->wristRotX += rotationSpeed; break;
+                case 5: currentArm->wristRotY += rotationSpeed; break;
+                case 6: currentArm->wristRotZ += rotationSpeed; break;
+                case 7: // Thumb
+                    currentArm->thumbBase += rotationSpeed;
+                    currentArm->thumbMid += rotationSpeed * 0.5f;
+                    currentArm->thumbTip += rotationSpeed * 0.3f;
+                    break;
+                case 8: // Index
+                    currentArm->indexBase += rotationSpeed;
+                    currentArm->indexMid += rotationSpeed * 0.7f;
+                    currentArm->indexTip += rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle
+                    currentArm->middleBase += rotationSpeed;
+                    currentArm->middleMid += rotationSpeed * 0.7f;
+                    currentArm->middleTip += rotationSpeed * 0.5f;
+                    break;
+                case 10: // Ring
+                    currentArm->ringBase += rotationSpeed;
+                    currentArm->ringMid += rotationSpeed * 0.7f;
+                    currentArm->ringTip += rotationSpeed * 0.5f;
+                    break;
+                case 11: // Pinky
+                    currentArm->pinkyBase += rotationSpeed;
+                    currentArm->pinkyMid += rotationSpeed * 0.7f;
+                    currentArm->pinkyTip += rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 2) { // Torso
+                switch (selectedJoint) {
+                case 0: body.torsoRotX += rotationSpeed; break;
+                case 1: body.torsoRotY += rotationSpeed; break;
+                case 2: body.torsoRotZ += rotationSpeed; break;
+                }
+            }
+            else if (selectedPart == 3) { // Left leg
+                LegControl* currentLeg = &leftLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX += rotationSpeed; break;
+                case 1: currentLeg->hipRotY += rotationSpeed; break;
+                case 2: currentLeg->hipRotZ += rotationSpeed; break;
+                case 3: currentLeg->kneeRot += rotationSpeed; break;
+                case 4: currentLeg->ankleRotX += rotationSpeed; break;
+                case 5: currentLeg->ankleRotY += rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ += rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase += rotationSpeed;
+                    currentLeg->bigToeMid += rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip += rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase += rotationSpeed;
+                    currentLeg->secondToeMid += rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase += rotationSpeed;
+                    currentLeg->middleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase += rotationSpeed;
+                    currentLeg->fourthToeMid += rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase += rotationSpeed;
+                    currentLeg->littleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip += rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            else if (selectedPart == 4) { // Right leg
+                LegControl* currentLeg = &rightLeg;
+                switch (selectedJoint) {
+                case 0: currentLeg->hipRotX += rotationSpeed; break;
+                case 1: currentLeg->hipRotY += rotationSpeed; break;
+                case 2: currentLeg->hipRotZ += rotationSpeed; break;
+                case 3: currentLeg->kneeRot += rotationSpeed; break;
+                case 4: currentLeg->ankleRotX += rotationSpeed; break;
+                case 5: currentLeg->ankleRotY += rotationSpeed; break;
+                case 6: currentLeg->ankleRotZ += rotationSpeed; break;
+                case 7: // Big toe
+                    currentLeg->bigToeBase += rotationSpeed;
+                    currentLeg->bigToeMid += rotationSpeed * 0.5f;
+                    currentLeg->bigToeTip += rotationSpeed * 0.3f;
+                    break;
+                case 8: // Second toe
+                    currentLeg->secondToeBase += rotationSpeed;
+                    currentLeg->secondToeMid += rotationSpeed * 0.7f;
+                    currentLeg->secondToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 9: // Middle toe
+                    currentLeg->middleToeBase += rotationSpeed;
+                    currentLeg->middleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->middleToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 10: // Fourth toe
+                    currentLeg->fourthToeBase += rotationSpeed;
+                    currentLeg->fourthToeMid += rotationSpeed * 0.7f;
+                    currentLeg->fourthToeTip += rotationSpeed * 0.5f;
+                    break;
+                case 11: // Little toe
+                    currentLeg->littleToeBase += rotationSpeed;
+                    currentLeg->littleToeMid += rotationSpeed * 0.7f;
+                    currentLeg->littleToeTip += rotationSpeed * 0.5f;
+                    break;
+                }
+            }
+            break;
+
+            // Reset poses
+        case 'Z':
+            memset(&leftArm, 0, sizeof(ArmControl));
+            memset(&rightArm, 0, sizeof(ArmControl));
+            memset(&body, 0, sizeof(BodyControl));
+            memset(&leftLeg, 0, sizeof(LegControl));
+            memset(&rightLeg, 0, sizeof(LegControl));
+            break;
+
+            // MOVEMENT POSES (Q-Y keys for quick access)
+        case 'Q': // 1. Idle - relaxed open hands (BOTH ARMS)
+            // Apply to both arms and torso
+             leftArm = { -90,0,0 };
+             rightArm = { -90,0,0 };
+             body = { -90, 0, 180 };
+            leftArm.thumbBase = 10; leftArm.thumbMid = 15; leftArm.thumbTip = 10;
+            leftArm.indexBase = 15; leftArm.indexMid = 20; leftArm.indexTip = 15;
+            leftArm.middleBase = 15; leftArm.middleMid = 20; leftArm.middleTip = 15;
+            leftArm.ringBase = 20; leftArm.ringMid = 25; leftArm.ringTip = 20;
+            leftArm.pinkyBase = 25; leftArm.pinkyMid = 30; leftArm.pinkyTip = 25;
+            // Mirror for right arm
+            rightArm = leftArm;
+            break;
+
+        case 'W': // 2. Walking - natural loose fist (BOTH ARMS)
+            //leftArm = { -90,0,0 };
+            //rightArm = { -90,0,0 };
+            //body = { -90, 0, 180 };
+            //leftArm.shoulderRotX = -10;
+            //leftArm.thumbBase = 30; leftArm.thumbMid = 35; leftArm.thumbTip = 20;
+            //leftArm.indexBase = 50; leftArm.indexMid = 45; leftArm.indexTip = 30;
+            //leftArm.middleBase = 55; leftArm.middleMid = 50; leftArm.middleTip = 35;
+            //leftArm.ringBase = 60; leftArm.ringMid = 55; leftArm.ringTip = 40;
+            //leftArm.pinkyBase = 65; leftArm.pinkyMid = 60; leftArm.pinkyTip = 45;
+            //rightArm = leftArm;
+            //body.torsoRotX = 5; // Slight forward lean
+            walkingAnimationEnabled = true;
+            animationEnabled = false;
+
+            break;
+
+        case 'E': // 3. Running - tight fist (BOTH ARMS)
+         /*   leftArm = { -90,0,0 };
+            rightArm = { -90,0,0 };
+            body = { -90, 0, 180 };*/
+            walkingAnimationEnabled = false;
+
+            animationEnabled = true;
+            //leftArm.shoulderRotX = -20;
+            //leftArm.elbowRot = 25;
+            //leftArm.thumbBase = 50; leftArm.thumbMid = 65; leftArm.thumbTip = 35;
+            //leftArm.indexBase = 85; leftArm.indexMid = 80; leftArm.indexTip = 60;
+            //leftArm.middleBase = 90; leftArm.middleMid = 85; leftArm.middleTip = 65;
+            //leftArm.ringBase = 90; leftArm.ringMid = 85; leftArm.ringTip = 65;
+            //leftArm.pinkyBase = 85; leftArm.pinkyMid = 80; leftArm.pinkyTip = 60;
+            //rightArm = leftArm;
+            //body.torsoRotX = -5; // Slight backward lean for speed
+            break;
+
+        case 'R': // 4. Jumping - spread fingers for balance (BOTH ARMS)
+            leftArm = { 0 };
+            rightArm = { 0 };
+            body = { 0 };
+            leftArm.shoulderRotX = -30;
+            leftArm.shoulderRotY = 15;
+            leftArm.elbowRot = -10;
+            leftArm.wristRotX = 20;
+            leftArm.thumbBase = -10; leftArm.thumbMid = 5; leftArm.thumbTip = 0;
+            leftArm.indexBase = -15; leftArm.indexMid = 0; leftArm.indexTip = 0;
+            leftArm.middleBase = -10; leftArm.middleMid = 0; leftArm.middleTip = 0;
+            leftArm.ringBase = -5; leftArm.ringMid = 0; leftArm.ringTip = 0;
+            leftArm.pinkyBase = 0; leftArm.pinkyMid = 5; leftArm.pinkyTip = 0;
+            rightArm = leftArm;
+            rightArm.shoulderRotY = -15; // Mirror the Y rotation
+            body.torsoRotX = -10; // Lean back slightly for landing
+            break;
+
+        case 'T': // 5. Victory Pose - V sign (BOTH ARMS)
+             leftArm = { -120,0,180 };
+             rightArm = { -120,0,180 };
+             body = { -90, 0, 180 };
+         /*   leftArm.shoulderRotX = -60;
+            leftArm.shoulderRotY = 45;
+            leftArm.shoulderRotZ = -30;
+            leftArm.elbowRot = -45;
+            leftArm.wristRotY = 20;*/
+             leftArm.shoulderRotX = -90;
+
+            // V-sign with index and middle finger
+            leftArm.thumbBase = 40; leftArm.thumbMid = 50; leftArm.thumbTip = 30;
+            leftArm.indexBase = -20; leftArm.indexMid = -10; leftArm.indexTip = 0;
+            leftArm.middleBase = -30; leftArm.middleMid = -15; leftArm.middleTip = 0;
+            leftArm.ringBase = 80; leftArm.ringMid = 75; leftArm.ringTip = 50;
+            leftArm.pinkyBase = 85; leftArm.pinkyMid = 80; leftArm.pinkyTip = 55;
+            //rightArm = leftArm;
+            //rightArm.shoulderRotY = -45; // Mirror Y rotation
+            //rightArm.shoulderRotZ = 30;  // Mirror Z rotation  
+            //rightArm.wristRotY = -20;    // Mirror wrist rotation
+            //body.torsoRotX = -15; // Lean back in celebration
+            break;
+
+        case 'Y': // 6. Swing Staff (ONE HAND SWINGING)
+            // Apply to both arms and torso
+            leftArm = { -90,0,0 };
+            rightArm = { -90,0,0 };
+            body = { -90, 0, 180 };
+            // Left arm: Swinging position (holding one end of staff)
+            leftArm.shoulderRotX = -90;
+            //leftArm.shoulderRotY = 45;
+            //leftArm.shoulderRotZ = -20;
+            leftArm.elbowRot = 60;
+            leftArm.wristRotX = -25;
+            leftArm.wristRotY = 30;
+            // Firm grip on staff
+            leftArm.thumbBase = 65; leftArm.thumbMid = 70; leftArm.thumbTip = 40;
+            leftArm.indexBase = 75; leftArm.indexMid = 80; leftArm.indexTip = 55;
+            leftArm.middleBase = 80; leftArm.middleMid = 85; leftArm.middleTip = 60;
+            leftArm.ringBase = 85; leftArm.ringMid = 90; leftArm.ringTip = 65;
+            leftArm.pinkyBase = 80; leftArm.pinkyMid = 85; leftArm.pinkyTip = 60;
+
+            // Right arm: Steady/guide position (other end of staff)
+            rightArm.shoulderRotX = -90;
+            //rightArm.shoulderRotY = -15;
+            rightArm.elbowRot = 30;
+            rightArm.wristRotX = 10;
+            // Lighter grip for guidance
+            rightArm.thumbBase = 45; rightArm.thumbMid = 50; rightArm.thumbTip = 25;
+            rightArm.indexBase = 60; rightArm.indexMid = 65; rightArm.indexTip = 40;
+            rightArm.middleBase = 65; rightArm.middleMid = 70; rightArm.middleTip = 45;
+            rightArm.ringBase = 70; rightArm.ringMid = 75; rightArm.ringTip = 50;
+            rightArm.pinkyBase = 65; rightArm.pinkyMid = 70; rightArm.pinkyTip = 45;
+
+            //body.torsoRotY = 20; // Turn torso for swing
+            break;
+
+            // Individual hand poses (for selected arm only)
+        case 'F': // Fist
+            if (selectedPart == 0) { // Left arm
+                leftArm.thumbBase = 45; leftArm.thumbMid = 60; leftArm.thumbTip = 30;
+                leftArm.indexBase = 80; leftArm.indexMid = 70; leftArm.indexTip = 50;
+                leftArm.middleBase = 80; leftArm.middleMid = 70; leftArm.middleTip = 50;
+                leftArm.ringBase = 80; leftArm.ringMid = 70; leftArm.ringTip = 50;
+                leftArm.pinkyBase = 80; leftArm.pinkyMid = 70; leftArm.pinkyTip = 50;
+            }
+            else if (selectedPart == 1) { // Right arm
+                rightArm.thumbBase = 45; rightArm.thumbMid = 60; rightArm.thumbTip = 30;
+                rightArm.indexBase = 80; rightArm.indexMid = 70; rightArm.indexTip = 50;
+                rightArm.middleBase = 80; rightArm.middleMid = 70; rightArm.middleTip = 50;
+                rightArm.ringBase = 80; rightArm.ringMid = 70; rightArm.ringTip = 50;
+                rightArm.pinkyBase = 80; rightArm.pinkyMid = 70; rightArm.pinkyTip = 50;
+            }
+            break;
+
+        case 'P': // Point
+            if (selectedPart == 0) { // Left arm
+                leftArm.thumbBase = 20; leftArm.thumbMid = 30; leftArm.thumbTip = 15;
+                leftArm.indexBase = 0; leftArm.indexMid = 0; leftArm.indexTip = 0;
+                leftArm.middleBase = 80; leftArm.middleMid = 70; leftArm.middleTip = 50;
+                leftArm.ringBase = 80; leftArm.ringMid = 70; leftArm.ringTip = 50;
+                leftArm.pinkyBase = 80; leftArm.pinkyMid = 70; leftArm.pinkyTip = 50;
+            }
+            else if (selectedPart == 1) { // Right arm
+                rightArm.thumbBase = 20; rightArm.thumbMid = 30; rightArm.thumbTip = 15;
+                rightArm.indexBase = 0; rightArm.indexMid = 0; rightArm.indexTip = 0;
+                rightArm.middleBase = 80; rightArm.middleMid = 70; rightArm.middleTip = 50;
+                rightArm.ringBase = 80; rightArm.ringMid = 70; rightArm.ringTip = 50;
+                rightArm.pinkyBase = 80; rightArm.pinkyMid = 70; rightArm.pinkyTip = 50;
+            }
+            break;
+
+        case 'O': // Open hand
+            if (selectedPart == 0) { // Left arm
+                memset(&leftArm.thumbBase, 0, sizeof(float) * 15);
+            }
+            else if (selectedPart == 1) { // Right arm
+                memset(&rightArm.thumbBase, 0, sizeof(float) * 15);
+            }
+            break;
+        }
+    }
+    break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc)
+{
+    PIXELFORMATDESCRIPTOR pfd = {};
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+
+    int pixelFormat = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, pixelFormat, &pfd);
+}
+
+void drawCube(float width, float height, float depth)
+{
+    float w = width / 2;
+    float h = height / 2;
+    float d = depth / 2;
+
+    glBegin(GL_QUADS);
+    // Front face
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(-w, -h, d); glVertex3f(w, -h, d); glVertex3f(w, h, d); glVertex3f(-w, h, d);
+    // Back face
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(-w, h, -d); glVertex3f(w, h, -d); glVertex3f(w, -h, -d);
+    // Left face
+    glNormal3f(-1.0f, 0.0f, 0.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(-w, -h, d); glVertex3f(-w, h, d); glVertex3f(-w, h, -d);
+    // Right face
+    glNormal3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(w, -h, -d); glVertex3f(w, h, -d); glVertex3f(w, h, d); glVertex3f(w, -h, d);
+    // Top face
+    glNormal3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(-w, h, -d); glVertex3f(-w, h, d); glVertex3f(w, h, d); glVertex3f(w, h, -d);
+    // Bottom face
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glVertex3f(-w, -h, -d); glVertex3f(w, -h, -d); glVertex3f(w, -h, d); glVertex3f(-w, -h, d);
+    glEnd();
+}
+
+void drawCylinder(float radius, float height, int segments = 12)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluCylinder(quad, radius, radius, height, segments, 1);
+    gluDeleteQuadric(quad);
+}
+
+void drawSphere(float radius, int segments = 12)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluSphere(quad, radius, segments, segments);
+    gluDeleteQuadric(quad);
+}
+
+void drawFinger(float baseRot, float midRot, float tipRot, float length = 0.25f)
+{
+    // Base segment
+    glPushMatrix();
+    glRotatef(baseRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.9f, 0.7f, 0.5f);
+    drawCylinder(0.02f, length * 0.4f);
+
+    // Joint
+    glTranslatef(0.0f, 0.0f, length * 0.4f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.022f);
+
+    // Middle segment
+    glRotatef(midRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.9f, 0.7f, 0.5f);
+    drawCylinder(0.016f, length * 0.35f);
+
+    // Joint
+    glTranslatef(0.0f, 0.0f, length * 0.35f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.019f);
+
+    // Tip segment
+    glRotatef(tipRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.9f, 0.7f, 0.5f);
+    drawCylinder(0.013f, length * 0.25f);
+
+    // Fingertip
+    glTranslatef(0.0f, 0.0f, length * 0.25f);
+    glColor3f(1.0f, 0.8f, 0.6f);
+    drawSphere(0.016f);
+
+    glPopMatrix();
+}
+
+void drawThumb(float baseRot, float midRot, float tipRot)
+{
+    glPushMatrix();
+    glRotatef(-45, 0.0f, 1.0f, 0.0f); // Thumb angle
+    glRotatef(20, 1.0f, 0.0f, 0.0f);
+
+    // Base segment (different from fingers)
+    glRotatef(baseRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.9f, 0.7f, 0.5f);
+    drawCylinder(0.022f, 0.16f);
+
+    glTranslatef(0.0f, 0.0f, 0.16f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.025f);
+
+    // Middle segment
+    glRotatef(midRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.9f, 0.7f, 0.5f);
+    drawCylinder(0.019f, 0.13f);
+
+    glTranslatef(0.0f, 0.0f, 0.13f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.022f);
+
+    // Tip segment
+    glRotatef(tipRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.9f, 0.7f, 0.5f);
+    drawCylinder(0.016f, 0.1f);
+
+    glTranslatef(0.0f, 0.0f, 0.1f);
+    glColor3f(1.0f, 0.8f, 0.6f);
+    drawSphere(0.019f);
+
+    glPopMatrix();
+}
+
+void drawHand(const ArmControl& arm)
+{
+    // Wukong's palm - slightly more muscular
+    glColor3f(0.9f, 0.7f, 0.5f);  // Slightly lighter than arms
+    drawCube(0.14f, 0.035f, 0.17f);
+
+    // Thumb (positioned on side of palm)
+    glPushMatrix();
+    glTranslatef(-0.05f, 0.0f, -0.05f);
+    drawThumb(arm.thumbBase, arm.thumbMid, arm.thumbTip);
+    glPopMatrix();
+
+    // Index finger
+    glPushMatrix();
+    glTranslatef(-0.04f, 0.0f, 0.08f);
+    drawFinger(arm.indexBase, arm.indexMid, arm.indexTip, 0.28f);
+    glPopMatrix();
+
+    // Middle finger
+    glPushMatrix();
+    glTranslatef(-0.013f, 0.0f, 0.08f);
+    drawFinger(arm.middleBase, arm.middleMid, arm.middleTip, 0.32f);
+    glPopMatrix();
+
+    // Ring finger
+    glPushMatrix();
+    glTranslatef(0.013f, 0.0f, 0.08f);
+    drawFinger(arm.ringBase, arm.ringMid, arm.ringTip, 0.28f);
+    glPopMatrix();
+
+    // Pinky finger
+    glPushMatrix();
+    glTranslatef(0.04f, 0.0f, 0.08f);
+    drawFinger(arm.pinkyBase, arm.pinkyMid, arm.pinkyTip, 0.22f);
+    glPopMatrix();
+}
+
+void drawTorso()
+{
+    // Wukong's main torso - longer and more muscular
+    glColor3f(0.85f, 0.65f, 0.45f);  // Golden-brown skin tone for Wukong
+    drawCube(0.7f, 0.18f, 1.4f);  // Wider, thicker, much taller torso
+
+    // Upper chest/pectoral area
+    glPushMatrix();
+    glTranslatef(0.0f, 0.05f, 0.5f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawCube(0.65f, 0.12f, 0.3f);
+    glPopMatrix();
+
+    // Lower abdomen
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, -0.4f);
+    glColor3f(0.82f, 0.62f, 0.42f);
+    drawCube(0.6f, 0.15f, 0.6f);
+    glPopMatrix();
+
+    // Shoulder connection points (where arms attach) - higher up
+    glPushMatrix();
+    glTranslatef(-0.4f, 0.0f, 0.55f);  // Left shoulder - higher position
+    glColor3f(0.75f, 0.55f, 0.35f);   // Darker shoulder joint
+    drawSphere(0.09f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.4f, 0.0f, 0.55f);   // Right shoulder - higher position
+    glColor3f(0.75f, 0.55f, 0.35f);   // Darker shoulder joint
+    drawSphere(0.09f);
+    glPopMatrix();
+
+    // Wukong's chest markings/fur patterns (decorative)
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, 0.3f);
+    glColor3f(0.9f, 0.7f, 0.5f);  // Lighter fur marking
+    drawCube(0.15f, 0.02f, 0.4f);
+    glPopMatrix();
+}
+
+void drawArm(const ArmControl& arm, bool isRight = false)
+{
+    glPushMatrix();
+
+    // Mirror for right arm
+    if (isRight) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Shoulder joint
+    glRotatef(arm.shoulderRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(arm.shoulderRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(arm.shoulderRotZ, 0.0f, 0.0f, 1.0f);
+
+    // Wukong's muscular upper arm
+    glColor3f(0.85f, 0.65f, 0.45f);  // Wukong's golden-brown skin
+    drawCylinder(0.055f, 0.55f);  // Slightly bigger and longer
+
+    // Elbow joint
+    glTranslatef(0.0f, 0.0f, 0.55f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.06f);
+
+    // Elbow rotation
+    glRotatef(arm.elbowRot, 1.0f, 0.0f, 0.0f);
+
+    // Wukong's forearm
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.045f, 0.48f);  // Slightly bigger
+
+    // Wrist joint
+    glTranslatef(0.0f, 0.0f, 0.48f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.048f);
+
+    // Wrist rotation
+    glRotatef(arm.wristRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(arm.wristRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(arm.wristRotZ, 0.0f, 0.0f, 1.0f);
+
+    // Hand
+    glTranslatef(0.0f, 0.0f, 0.03f);
+    drawHand(arm);
+
+    glPopMatrix();
+}
+
+void updateAnimation() // running animation
+{
+    if (!animationEnabled) return;
+
+    animationTime += animationSpeed;
+
+    // Keep your original base pose (upward-facing design)
+    leftArm = { -90, 0, 90 };
+    rightArm = { -90, 0, 90 };
+    body = { -90, 0, 180 };
+
+    // Add animation movements ON TOP of the base pose
+    // Body sway animation (back and forth)
+    body.torsoRotY += sin(animationTime) * 15.0f; // Add sway left and right
+    body.torsoRotZ += sin(animationTime * 0.7f) * 5.0f; // Add forward/back movement
+
+    // Left arm swing animation (added to base pose)
+    leftArm.shoulderRotX += sin(animationTime * 1.2f) * 50.0f; // Add swing motion
+    leftArm.shoulderRotY += cos(animationTime * 0.8f) * 10.0f; // Add side movement
+    leftArm.elbowRot += sin(animationTime * 1.5f) * 15.0f; // Add elbow variation
+
+    //// Right arm swing animation (opposite phase, added to base pose)
+    rightArm.shoulderRotX += sin(animationTime * 1.2f + 3.14159f) * 50.0f; // Opposite swing
+    rightArm.shoulderRotY += cos(animationTime * 0.8f + 3.14159f) * 10.0f; // Opposite side
+    rightArm.elbowRot += sin(animationTime * 1.5f + 3.14159f) * 15.0f; // Opposite elbow
+
+    // Hand animations (subtle finger movements)
+    float fingerWave = sin(animationTime * 2.0f) * 5.0f;
+    leftArm.indexBase = fingerWave;
+    leftArm.middleBase = fingerWave * 0.8f;
+    leftArm.ringBase = fingerWave * 0.6f;
+    leftArm.pinkyBase = fingerWave * 0.4f;
+
+    rightArm.indexBase = -fingerWave;
+    rightArm.middleBase = -fingerWave * 0.8f;
+    rightArm.ringBase = -fingerWave * 0.6f;
+    rightArm.pinkyBase = -fingerWave * 0.4f;
+}
+
+
+void updateWalkingAnimation()
+{
+    if (!walkingAnimationEnabled) return;
+    animationTime += animationSpeed * 0.3f; // Slower speed for walking
+
+    // Keep your original base pose (upward-facing design)
+    leftArm = { -90, 0, 90 };
+    rightArm = { -90, 0, 90 };
+    body = { -90, 0, 180 };
+
+    // Add walking movements ON TOP of the base pose
+
+    // Body movement - subtle vertical bob and gentle sway
+    //body.torsoRotY += sin(animationTime * 2.0f) * 8.0f; // Gentle side sway
+    body.torsoRotZ += sin(animationTime * 4.0f) * 3.0f; // Subtle forward lean rhythm
+    // Add slight vertical head bob (if you have head control)
+    // body.headY += sin(animationTime * 4.0f) * 2.0f;
+
+    // Walking arm swing - alternating, more controlled than running
+    float armSwingPhase = animationTime * 2.0f; // Walking pace
+
+    // Left arm swing (coordinated with right leg step)
+    leftArm.shoulderRotX += sin(armSwingPhase) * 50.0f; // Forward/back swing
+    leftArm.shoulderRotY += sin(armSwingPhase * 0.5f) * 5.0f; // Slight side movement
+    leftArm.elbowRot += sin(armSwingPhase) * 10.0f + 10.0f; // Natural elbow bend
+
+    // Right arm swing (opposite phase - coordinated with left leg step)
+    rightArm.shoulderRotX += sin(armSwingPhase + 3.14159f) * 50.0f; // Opposite swing
+    rightArm.shoulderRotY += sin(armSwingPhase * 0.5f + 3.14159f) * 5.0f; // Opposite side
+    rightArm.elbowRot += sin(armSwingPhase + 3.14159f) * 10.0f + 10.0f; // Opposite elbow
+
+    // Hand animations - relaxed finger movement (less dramatic than running)
+    float fingerWalk = sin(animationTime * 1.5f) * 3.0f;
+    leftArm.indexBase = fingerWalk;
+    leftArm.middleBase = fingerWalk * 0.9f;
+    leftArm.ringBase = fingerWalk * 0.7f;
+    leftArm.pinkyBase = fingerWalk * 0.5f;
+
+    rightArm.indexBase = -fingerWalk;
+    rightArm.middleBase = -fingerWalk * 0.9f;
+    rightArm.ringBase = -fingerWalk * 0.7f;
+    rightArm.pinkyBase = -fingerWalk * 0.5f;
+
+    // Optional: Add subtle shoulder roll for more natural walking
+    leftArm.shoulderRotZ += sin(armSwingPhase * 0.8f) * 3.0f;
+    rightArm.shoulderRotZ += sin(armSwingPhase * 0.8f + 3.14159f) * 3.0f;
+}
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    // Lighting setup
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    GLfloat lightPos[] = { 2.0f, 2.0f, 2.0f, 1.0f };
+    GLfloat lightAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+    GLfloat lightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat lightSpecular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glTranslatef(0.0f, 0.0f, -3.5f); // Camera distance
+
+    // Apply torso rotation to entire figure
+    glPushMatrix();
+    glRotatef(body.torsoRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(body.torsoRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(body.torsoRotZ, 0.0f, 0.0f, 1.0f);
+
+    // Draw torso (highlight if selected)
+    if (selectedPart == 2) {
+        glColor3f(1.0f, 0.8f, 0.8f); // Highlight selected torso
+    }
+    drawTorso();
+
+    // Draw left arm (attached to torso)
+    glPushMatrix();
+    glTranslatef(-0.4f, 0.0f, 0.55f); // Position at left shoulder - updated position
+    if (selectedPart == 0) {
+        glColor3f(1.0f, 0.8f, 0.8f); // Highlight selected arm
+    }
+    drawArm(leftArm, false);
+    glPopMatrix();
+
+    // Draw right arm (attached to torso)
+    glPushMatrix();
+    glTranslatef(0.4f, 0.0f, 0.55f); // Position at right shoulder - updated position
+    if (selectedPart == 1) {
+        glColor3f(1.0f, 0.8f, 0.8f); // Highlight selected arm
+    }
+    drawArm(rightArm, true);
+    glPopMatrix();
+
+    glPopMatrix(); // End torso transformation
+
+    glDisable(GL_LIGHTING);
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    RegisterClassEx(&wc);
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    wglMakeCurrent(hdc, hglrc);
+    ShowWindow(hWnd, nCmdShow);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45, 1024.0 / 768.0, 0.1, 100);
+
+    glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+
+    MSG msg = {};
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        updateAnimation(); // Add this line
+        updateWalkingAnimation();
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+
+    return 0;
+}
+
+/*
+CONTROLS - WUKONG CHARACTER MODEL:
+
+
+
+WUKONG MOVEMENT POSES (Q-Y keys):
+Q - Idle (relaxed stance)
+W - Walking (natural movement with torso lean)
+E - Running (aggressive sprint pose)
+R - Jumping (aerial balance pose)
+T - Victory Pose (triumphant V-sign)
+Y - Staff Combat (powerful swing stance)
+
+HAND POSES (for selected arm):
+F - Make fist (combat ready)
+
+Z - Reset all (arms and torso)
+
+*/
+
+void drawToe(float baseRot, float midRot, float tipRot, float length = 0.18f, float scale = 1.0f)
+{
+    glPushMatrix();
+    glRotatef(baseRot, 1.0f, 0.0f, 0.0f);
+    
+    // Base segment (longer for monkey toes)
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.018f * scale, length * 0.45f);
+
+    // First joint
+    glTranslatef(0.0f, 0.0f, length * 0.45f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.02f * scale);
+
+    // Middle segment
+    glRotatef(midRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.015f * scale, length * 0.35f);
+
+    // Second joint
+    glTranslatef(0.0f, 0.0f, length * 0.35f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.017f * scale);
+
+    // Tip segment
+    glRotatef(tipRot, 1.0f, 0.0f, 0.0f);
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.012f * scale, length * 0.2f);
+
+    // Toe tip
+    glTranslatef(0.0f, 0.0f, length * 0.2f);
+    glColor3f(0.7f, 0.5f, 0.3f);
+    drawSphere(0.015f * scale);
+
+    glPopMatrix();
+}
+
+void drawBigToe(float baseRot, float midRot, float tipRot)
+{
+    glPushMatrix();
+    glRotatef(-30, 0.0f, 1.0f, 0.0f); // Angle for opposable big toe
+    glRotatef(15, 1.0f, 0.0f, 0.0f);
+
+    // Larger and more robust big toe
+    drawToe(baseRot, midRot, tipRot, 0.22f, 1.4f);
+
+    glPopMatrix();
+}
+
+void drawFoot(const LegControl& leg)
+{
+    // Monkey foot - longer and more flexible than human foot
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCube(0.12f, 0.035f, 0.2f); // Longer foot for monkey
+
+    // Big toe (opposable, like thumb)
+    glPushMatrix();
+    glTranslatef(-0.045f, 0.0f, 0.12f);
+    drawBigToe(leg.bigToeBase, leg.bigToeMid, leg.bigToeTip);
+    glPopMatrix();
+
+    // Second toe
+    glPushMatrix();
+    glTranslatef(-0.02f, 0.0f, 0.18f);
+    drawToe(leg.secondToeBase, leg.secondToeMid, leg.secondToeTip);
+    glPopMatrix();
+
+    // Middle toe
+    glPushMatrix();
+    glTranslatef(0.01f, 0.0f, 0.19f);
+    drawToe(leg.middleToeBase, leg.middleToeMid, leg.middleToeTip);
+    glPopMatrix();
+
+    // Fourth toe
+    glPushMatrix();
+    glTranslatef(0.04f, 0.0f, 0.18f);
+    drawToe(leg.fourthToeBase, leg.fourthToeMid, leg.fourthToeTip);
+    glPopMatrix();
+
+    // Little toe
+    glPushMatrix();
+    glTranslatef(0.06f, 0.0f, 0.16f);
+    drawToe(leg.littleToeBase, leg.littleToeMid, leg.littleToeTip, 0.15f, 0.8f);
+    glPopMatrix();
+}
+
+void drawLeg(const LegControl& leg, bool isRight = false)
+{
+    glPushMatrix();
+
+    // Mirror for right leg
+    if (isRight) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Hip joint rotations
+    glRotatef(leg.hipRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(leg.hipRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(leg.hipRotZ, 0.0f, 0.0f, 1.0f);
+
+    // Upper leg (thigh) - muscular for monkey
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.065f, 0.6f); // Thicker and slightly longer
+
+    // Knee joint
+    glTranslatef(0.0f, 0.0f, 0.6f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.07f);
+
+    // Knee rotation
+    glRotatef(leg.kneeRot, 1.0f, 0.0f, 0.0f);
+
+    // Lower leg (calf) - muscular but slightly thinner
+    glColor3f(0.85f, 0.65f, 0.45f);
+    drawCylinder(0.055f, 0.55f);
+
+    // Ankle joint
+    glTranslatef(0.0f, 0.0f, 0.55f);
+    glColor3f(0.8f, 0.6f, 0.4f);
+    drawSphere(0.055f);
+
+    // Ankle rotations
+    glRotatef(leg.ankleRotX, 1.0f, 0.0f, 0.0f);
+    glRotatef(leg.ankleRotY, 0.0f, 1.0f, 0.0f);
+    glRotatef(leg.ankleRotZ, 0.0f, 0.0f, 1.0f);
+
+    // Draw foot
+    glTranslatef(0.0f, 0.0f, 0.02f);
+    drawFoot(leg);
+
+    glPopMatrix();
+}

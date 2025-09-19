@@ -1,0 +1,367 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Human Foot Anatomy"
+#define PI 3.14159265359
+
+// Global variables for camera control
+float rotationX = 90.0f; // Default view from bottom
+float rotationY = 0.0f;
+float zoom = -1.0f; // Adjusted for better view of the scaled foot
+
+// Struct to control toe articulation
+struct ToeControl {
+    float baseRot; // Rotation at metatarsophalangeal joint
+    float midRot;  // Rotation at proximal interphalangeal joint
+    float tipRot;  // Rotation at distal interphalangeal joint
+};
+
+GLUquadricObj* quadric = NULL; // Global quadric for consistent rendering
+
+// --- Drawing Utilities ---
+
+// Draw a sphere
+void drawSphere(float radius) {
+    if (!quadric) quadric = gluNewQuadric();
+    gluSphere(quadric, radius, 20, 20);
+}
+
+// Draw a cylinder
+void drawCylinder(float baseRadius, float topRadius, float height) {
+    if (!quadric) quadric = gluNewQuadric();
+    gluCylinder(quadric, baseRadius, topRadius, height, 20, 20);
+}
+
+// Draw a tapered cylinder (wrapper for drawCylinder)
+void drawTaperedCylinder(float baseRadius, float topRadius, float height) {
+    drawCylinder(baseRadius, topRadius, height);
+}
+
+// Draw a disk (for flat surfaces like the base of big toe)
+void drawDisk(float innerRadius, float outerRadius) {
+    if (!quadric) quadric = gluNewQuadric();
+    gluDisk(quadric, innerRadius, outerRadius, 20, 1);
+}
+
+// --- Toe Drawing Functions ---
+
+// Draw a single human toe with clear anatomical definition
+void drawToe(const ToeControl& toe, float length, float thickness) {
+    glPushMatrix();
+
+    // --- PROXIMAL PHALANX (Base segment) ---
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, -0.012f); // Embedded for seamless connection
+    glRotatef(toe.baseRot, 1.0f, 0.0f, 0.0f);
+
+    // Main toe bone structure (phalanx) - more rounded, human-like
+    glColor3f(0.98f, 0.85f, 0.7f); // Skin tone
+    drawTaperedCylinder(thickness * 0.9f, thickness * 0.8f, length * 0.45f);
+
+    // MTP joint (Metatarsophalangeal joint)
+    glTranslatef(0.0f, 0.0f, length * 0.45f);
+    glColor3f(0.95f, 0.82f, 0.68f); // Slightly darker for joint
+    drawSphere(thickness * 0.9f);
+    glPopMatrix(); // End proximal phalanx segment
+
+    // Continue from joint position for middle phalanx
+    glTranslatef(0.0f, 0.0f, length * 0.43f);
+    glRotatef(toe.baseRot, 1.0f, 0.0f, 0.0f);
+
+    // --- MIDDLE PHALANX (Only for toes 2-5) ---
+    if (length > 0.1f) { // Condition to check if it's not the big toe
+        glRotatef(toe.midRot, 1.0f, 0.0f, 0.0f);
+
+        // Main middle bone structure
+        glColor3f(0.98f, 0.85f, 0.7f); // Skin tone
+        drawTaperedCylinder(thickness * 0.75f, thickness * 0.6f, length * 0.35f);
+
+        // PIP joint (Proximal Interphalangeal joint)
+        glTranslatef(0.0f, 0.0f, length * 0.35f);
+        glColor3f(0.95f, 0.82f, 0.68f); // Joint color
+        drawSphere(thickness * 0.7f);
+    }
+    else { // For big toe, directly go to DIP equivalent (IP joint)
+        glTranslatef(0.0f, 0.0f, length * 0.35f); // Adjust position for big toe's single joint
+        glRotatef(toe.midRot, 1.0f, 0.0f, 0.0f); // Use midRot for big toe's IP joint
+    }
+
+
+    // --- DISTAL PHALANX (Tip segment) ---
+    glRotatef(toe.tipRot, 1.0f, 0.0f, 0.0f);
+
+    // Human toe tip (more rounded)
+    glColor3f(0.98f, 0.85f, 0.7f); // Skin tone
+    glPushMatrix();
+    glScalef(1.0f, 1.0f, 1.3f); // More rounded tip
+    drawSphere(thickness * 0.6f);
+    glPopMatrix();
+
+    // Move to tip position for nail
+    glTranslatef(0.0f, 0.0f, length * 0.15f); // Adjusted for human proportions
+
+    // Toenail
+    glPushMatrix();
+    glTranslatef(0.0f, thickness * 0.3f, -thickness * 0.1f);
+    glScalef(0.8f, 0.3f, 0.7f); // Flatter, wider human nail
+    glColor3f(0.98f, 0.92f, 0.88f); // Natural nail color
+    drawSphere(thickness * 0.5f);
+    glPopMatrix();
+
+    // Toe pad (fleshy tip)
+    glPushMatrix();
+    glTranslatef(0.0f, -thickness * 0.2f, 0.0f);
+    glColor3f(0.98f, 0.85f, 0.7f); // Skin tone
+    drawSphere(thickness * 0.45f);
+    glPopMatrix();
+
+    glPopMatrix(); // End toe matrix
+}
+
+// Draw all five human toes
+void drawToes(const ToeControl toes[5]) {
+    // Human toe positioning - big toe much larger, toes 2-4 gradually shorter, little toe shortest
+    static const float offsets[5] = { -0.035f, -0.0175f, 0.0f, 0.0175f, 0.0325f }; // Reduced spacing
+    static const float lengths[5] = { 0.08f, 0.055f, 0.05f, 0.045f, 0.04f };    // Reduced lengths
+    static const float thickness[5] = { 0.02f, 0.0125f, 0.011f, 0.01f, 0.009f }; // Reduced thickness
+    static const float heights[5] = { -0.0025f, -0.005f, -0.006f, -0.005f, -0.004f }; // Adjusted curve
+
+    // Big toe (Hallux)
+    glPushMatrix();
+    glTranslatef(offsets[0], heights[0], 0.0075f); // Adjusted forward position
+    glRotatef(-5.0f, 0.0f, 1.0f, 0.0f); // Slightly reduced outward angle
+    drawToe(toes[0], lengths[0], thickness[0]);
+    glPopMatrix();
+
+    // Toes 2-5
+    for (int i = 1; i < 5; ++i) {
+        glPushMatrix();
+        glTranslatef(offsets[i], heights[i], 0.0025f);
+        float angleVariation = (i - 2.5f) * 2.0f; // Reduced fan-out angle
+        glRotatef(angleVariation, 0.0f, 1.0f, 0.0f);
+        drawToe(toes[i], lengths[i], thickness[i]);
+        glPopMatrix();
+    }
+}
+
+
+// --- Main Foot Drawing Function ---
+void drawFoot() {
+    glColor3f(0.98f, 0.85f, 0.7f); // General skin tone for the foot
+    float scale = 0.5f; // Global scale factor for the foot
+
+    glPushMatrix();
+    glScalef(scale, scale, scale); // Apply global scaling
+
+    // --- FOREFOOT & TOES ---
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.06f); // Adjusted toe position
+    static ToeControl toes[5] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f}
+    };
+    drawToes(toes);
+    glPopMatrix();
+
+    // --- METATARSALS / BRIDGE OF FOOT ---
+    glPushMatrix();
+    glTranslatef(0.0f, -0.025f, -0.025f); // Adjusted position
+    glRotatef(90, 1, 0, 0);
+    glScalef(1.0f, 1.1f, 1.0f); // Slightly less elongated
+    drawCylinder(0.06f, 0.09f, 0.125f); // Reduced size, maintained proportions
+    glPopMatrix();
+
+    // --- INSTEP (Top of foot) ---
+    glPushMatrix();
+    glTranslatef(0.0f, 0.025f, -0.025f);
+    glScalef(0.1f, 0.04f, 0.1f); // Reduced size
+    drawSphere(1.0f);
+    glPopMatrix();
+
+    // --- ARCH (Medial Longitudinal Arch) ---
+    glPushMatrix();
+    glColor3f(0.9f, 0.75f, 0.6f);
+    glTranslatef(0.0f, -0.05f, -0.025f);
+    glScalef(0.06f, 0.03f, 0.125f); // Adjusted for better arch shape
+    drawSphere(1.0f);
+    glPopMatrix();
+
+    // --- HEEL ---
+    glPushMatrix();
+    glColor3f(0.9f, 0.75f, 0.6f);
+    glTranslatef(0.0f, -0.05f, -0.15f);
+    glScalef(0.075f, 0.04f, 0.075f); // Reduced size
+    drawSphere(1.0f);
+    glPopMatrix();
+
+    // --- CALCANEUS ---
+    glPushMatrix();
+    glColor3f(0.95f, 0.82f, 0.68f);
+    glTranslatef(0.0f, -0.06f, -0.175f);
+    glScalef(0.06f, 0.035f, 0.05f); // Adjusted proportions
+    drawSphere(1.0f);
+    glPopMatrix();
+
+    // --- ANKLE BONES ---
+    // Medial malleolus
+    glPushMatrix();
+    glTranslatef(-0.04f, 0.025f, -0.2f);
+    glScalef(0.025f, 0.04f, 0.025f);
+    drawSphere(1.0f);
+    glPopMatrix();
+
+    // Lateral malleolus
+    glPushMatrix();
+    glTranslatef(0.04f, 0.025f, -0.2f);
+    glScalef(0.025f, 0.04f, 0.025f);
+    drawSphere(1.0f);
+    glPopMatrix();
+
+    // --- ACHILLES TENDON ---
+    glPushMatrix();
+    glColor3f(0.85f, 0.7f, 0.55f);
+    glTranslatef(0.0f, 0.0f, -0.2f);
+    glRotatef(90, 1, 0, 0);
+    drawCylinder(0.015f, 0.01f, 0.075f); // Reduced size
+    glPopMatrix();
+
+    glPopMatrix(); // End global scaling
+}
+
+
+// --- APPLICATION FRAMEWORK ---
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    GLfloat lightPos0[] = { 1.0f, 1.0f, 1.0f, 0.0f }; // Directional light for consistent shading
+    GLfloat lightAmbient0[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+    GLfloat lightDiffuse0[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+    GLfloat lightSpecular0[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+
+    GLfloat matShininess[] = { 20.0f }; // Low shininess for skin
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_ESCAPE: PostQuitMessage(0); break;
+        case VK_LEFT:   rotationY -= 5.0f; break;
+        case VK_RIGHT:  rotationY += 5.0f; break;
+        case VK_UP:     rotationX -= 5.0f; break;
+        case VK_DOWN:   rotationX += 5.0f; break;
+        }
+        break;
+
+    default:
+        break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc) {
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // Camera setup
+    glTranslatef(0.0f, 0.0f, zoom);
+    glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+    glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+    drawFoot();
+
+    // Clean up quadric on exit
+    if (quadric) {
+        gluDeleteQuadric(quadric);
+        quadric = NULL;
+    }
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow) {
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    ShowWindow(hWnd, nCmdShow);
+
+    // Initialize OpenGL
+    glEnable(GL_DEPTH_TEST);
+    setupLighting();
+    glMatrixMode(GL_PROJECTION);
+    gluPerspective(45.0f, 800.0f / 600.0f, 0.01f, 100.0f); // Near clip adjusted for close-up
+    glMatrixMode(GL_MODELVIEW);
+    glClearColor(0.8f, 0.9f, 1.0f, 1.0f); // Light blue background
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true) {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return (int)msg.wParam;
+}

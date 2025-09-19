@@ -1,0 +1,320 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Cowboy Boot Design"
+#define PI 3.14159265359
+
+// Global variables for camera control
+float rotationX = 15.0f;
+float rotationY = -25.0f;
+float zoom = -8.0f;
+
+// Utility to draw a torus (for the harness ring)
+void drawTorus(float ringRadius, float tubeRadius, int numSides, int numRings) {
+    for (int i = 0; i < numRings; ++i) {
+        float theta = (float)i * 2.0f * PI / numRings;
+        float nextTheta = (float)(i + 1) * 2.0f * PI / numRings;
+        glBegin(GL_QUAD_STRIP);
+        for (int j = 0; j <= numSides; ++j) {
+            float phi = (float)j * 2.0f * PI / numSides;
+            float cosPhi = cosf(phi), sinPhi = sinf(phi);
+            float x0 = (ringRadius + tubeRadius * cosPhi) * cosf(theta);
+            float y0 = (ringRadius + tubeRadius * cosPhi) * sinf(theta);
+            float z0 = tubeRadius * sinPhi;
+            float x1 = (ringRadius + tubeRadius * cosPhi) * cosf(nextTheta);
+            float y1 = (ringRadius + tubeRadius * cosPhi) * sinf(nextTheta);
+            float z1 = z0;
+            glNormal3f(cosf(theta) * cosPhi, sinf(theta) * cosPhi, sinPhi);
+            glVertex3f(x0, y0, z0);
+            glNormal3f(cosf(nextTheta) * cosPhi, sinf(nextTheta) * cosPhi, sinPhi);
+            glVertex3f(x1, y1, z1);
+        }
+        glEnd();
+    }
+}
+
+// Main function to draw a single cowboy boot, matching the sketch
+void drawCowboyBoot(bool isLeft) {
+    // Colors
+    GLfloat soleColor[] = { 0.3f, 0.2f, 0.15f, 1.0f };
+    GLfloat leatherColor[] = { 0.54f, 0.35f, 0.2f, 1.0f };
+    GLfloat darkerLeather[] = { 0.45f, 0.28f, 0.16f, 1.0f };
+    GLfloat metalColor[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+    GLfloat stitchColor[] = { 0.9f, 0.8f, 0.7f, 1.0f };
+
+    glPushMatrix(); // Start of boot matrix
+
+    // Mirror the boot if it's the right one
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // --- Sole ---
+    glColor3fv(soleColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.0f, 0.2f);
+    glScalef(0.8f, 0.1f, 2.6f);
+    GLUquadric* sole = gluNewQuadric();
+    gluSphere(sole, 0.5, 20, 20);
+    gluDeleteQuadric(sole);
+    glPopMatrix();
+
+    // --- Angled Western Heel ---
+    glColor3fv(soleColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.8f, -1.0f);
+    glRotatef(10, 1.0f, 0.0f, 0.0f); // Angle the heel back
+    glScalef(0.6f, 0.6f, 0.5f);
+    GLUquadric* heel = gluNewQuadric();
+    gluCylinder(heel, 0.5, 0.4, 1.0, 12, 1);
+    glPushMatrix();
+    glTranslatef(0, 0, 1);
+    gluDisk(heel, 0, 0.4, 12, 1);
+    glPopMatrix();
+    gluDeleteQuadric(heel);
+    glPopMatrix();
+
+    // --- Main Foot Body (Vamp) ---
+    glColor3fv(leatherColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.4f, 0.4f);
+    glScalef(0.7f, 0.65f, 1.5f);
+    GLUquadric* vamp = gluNewQuadric();
+    gluSphere(vamp, 0.7, 20, 20);
+    gluDeleteQuadric(vamp);
+    glPopMatrix();
+
+    // --- Boot Shaft (using Quads for shape) ---
+    glColor3fv(leatherColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.6f, -0.4f);
+    glScalef(0.45f, 1.5f, 0.5f);
+    glBegin(GL_QUADS);
+    // Front
+    glNormal3f(0, 0, 1);
+    glVertex3f(-1, -1, 1); glVertex3f(1, -1, 1); glVertex3f(1, 1, 1); glVertex3f(-1, 1.2, 1); // Curved top
+    // Back
+    glNormal3f(0, 0, -1);
+    glVertex3f(1, -1, -1); glVertex3f(-1, -1, -1); glVertex3f(-1, 1.2, -1); glVertex3f(1, 1, -1); // Curved top
+    // Left
+    glNormal3f(-1, 0, 0);
+    glVertex3f(-1, -1, -1); glVertex3f(-1, -1, 1); glVertex3f(-1, 1.2, 1); glVertex3f(-1, 1.2, -1);
+    // Right
+    glNormal3f(1, 0, 0);
+    glVertex3f(1, -1, 1); glVertex3f(1, -1, -1); glVertex3f(1, 1, -1); glVertex3f(1, 1, 1);
+    glEnd();
+    glPopMatrix();
+
+    // --- Ankle Harness (using Quads for solid straps) ---
+    glColor3fv(darkerLeather);
+    // Metal Ring
+    glPushMatrix();
+    glColor3fv(metalColor);
+    glTranslatef(-0.55f, -0.4f, -0.2f);
+    glRotatef(90, 0, 1, 0);
+    drawTorus(0.12, 0.025, 12, 16);
+    glPopMatrix();
+
+    // Straps
+    glColor3fv(darkerLeather);
+    // Back Strap
+    glPushMatrix();
+    glRotatef(25, 0, 1, 0);
+    glTranslatef(-0.1f, -0.4f, -0.8f);
+    glScalef(0.6f, 0.1f, 0.1f);
+    glBegin(GL_QUADS);
+    glNormal3f(0, 0, 1);
+    glVertex3f(-1, -1, 0); glVertex3f(1, -1, 0); glVertex3f(1, 1, 0); glVertex3f(-1, 1, 0);
+    glEnd();
+    glPopMatrix();
+
+    // Front Strap
+    glPushMatrix();
+    glRotatef(-40, 0, 1, 0);
+    glTranslatef(0.3f, -0.4f, 0.4f);
+    glScalef(0.6f, 0.1f, 0.1f);
+    glBegin(GL_QUADS);
+    glNormal3f(0, 0, 1);
+    glVertex3f(-1, -1, 0); glVertex3f(1, -1, 0); glVertex3f(1, 1, 0); glVertex3f(-1, 1, 0);
+    glEnd();
+    glPopMatrix();
+
+
+    // --- Decorative Elements from Sketch ---
+    glDisable(GL_LIGHTING); // Disable lighting for clean lines
+    glColor3fv(stitchColor);
+    glLineWidth(1.5f);
+
+    // Stitching on top of the foot
+    glBegin(GL_LINE_LOOP);
+    glVertex3f(-0.35f, -0.2f, 1.0f);
+    glVertex3f(0.35f, -0.2f, 1.0f);
+    glVertex3f(0.25f, -0.4f, 0.8f);
+    glVertex3f(-0.25f, -0.4f, 0.8f);
+    glEnd();
+
+    // Vertical stitching lines on shaft
+    for (int i = 0; i < 4; i++) {
+        float x = -0.3f + i * 0.2f;
+        glBegin(GL_LINES);
+        glVertex3f(x, -0.2f, 0.05f);
+        glVertex3f(x, 1.5f, -0.1f); // Angled slightly
+        glEnd();
+    }
+
+    // Stitching defining the panels
+    glBegin(GL_LINE_STRIP);
+    glVertex3f(-0.45f, 1.9f, 0.05f);
+    glVertex3f(-0.4f, 0.2f, -0.1f);
+    glVertex3f(0.0f, -0.3f, -0.3f);
+    glVertex3f(0.4f, 0.2f, -0.1f);
+    glVertex3f(0.45f, 1.9f, 0.05f);
+    glEnd();
+
+
+    glLineWidth(1.0f);
+    glEnable(GL_LIGHTING); // Re-enable lighting
+
+    glPopMatrix(); // End of boot matrix
+}
+
+
+// --- APPLICATION FRAMEWORK (No changes needed below this line) ---
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    GLfloat lightPos0[] = { 4.0f, 5.0f, 6.0f, 1.0f };
+    GLfloat lightAmbient0[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    GLfloat lightDiffuse0[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+    GLfloat lightSpecular0[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+
+    GLfloat matShininess[] = { 50.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_ESCAPE: PostQuitMessage(0); break;
+        case VK_LEFT:   rotationY -= 5.0f; break;
+        case VK_RIGHT:  rotationY += 5.0f; break;
+        case VK_UP:     rotationX -= 5.0f; break;
+        case VK_DOWN:   rotationX += 5.0f; break;
+        case 'W':       zoom += 0.5f; break;
+        case 'S':       zoom -= 0.5f; break;
+        }
+        break;
+
+    default:
+        break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc) {
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // Camera setup
+    glTranslatef(0.0f, -0.5f, zoom);
+    glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+    glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+    // Draw left cowboy boot
+    glPushMatrix();
+    glTranslatef(-1.2f, 0.0f, 0.0f);
+    drawCowboyBoot(true);
+    glPopMatrix();
+
+    // Draw right cowboy boot
+    glPushMatrix();
+    glTranslatef(1.2f, 0.0f, 0.0f);
+    drawCowboyBoot(false);
+    glPopMatrix();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow) {
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    ShowWindow(hWnd, nCmdShow);
+
+    // Initialize OpenGL
+    glEnable(GL_DEPTH_TEST);
+    setupLighting();
+    glMatrixMode(GL_PROJECTION);
+    gluPerspective(45.0f, 1024.0f / 768.0f, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glClearColor(0.2f, 0.15f, 0.15f, 1.0f); // Dark brown background
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true) {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return (int)msg.wParam;
+}

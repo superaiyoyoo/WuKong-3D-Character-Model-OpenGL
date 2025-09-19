@@ -1,0 +1,341 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Shoe Design"
+#define PI 3.14159265359
+
+// Global variables for camera control
+float rotationX = 0.0f;
+float rotationY = 0.0f;
+float zoom = -6.0f;
+
+void drawShoe(bool isLeft) {
+    // Scale for right shoe (mirror)
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Base color for the shoe
+    GLfloat mainColor[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Dark gray
+    GLfloat soleColor[] = { 0.3f, 0.3f, 0.3f, 1.0f }; // Slightly lighter gray
+    GLfloat accentColor[] = { 0.8f, 0.1f, 0.1f, 1.0f }; // Red accent
+    GLfloat shaftColor[] = { 0.18f, 0.18f, 0.18f, 1.0f }; // Slightly different for shaft
+    GLfloat seamColor[] = { 0.3f, 0.3f, 0.3f, 1.0f }; // For seams/straps
+
+    // Draw sole
+    glColor3fv(soleColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.3f, 0.0f);
+    glScalef(1.0f, 0.2f, 2.5f);
+    glBegin(GL_QUADS);
+    // Bottom
+    glVertex3f(-0.5f, -0.5f, -0.5f);
+    glVertex3f(0.5f, -0.5f, -0.5f);
+    glVertex3f(0.5f, -0.5f, 0.5f);
+    glVertex3f(-0.5f, -0.5f, 0.5f);
+    // Top
+    glVertex3f(-0.5f, 0.5f, -0.5f);
+    glVertex3f(0.5f, 0.5f, -0.5f);
+    glVertex3f(0.5f, 0.5f, 0.5f);
+    glVertex3f(-0.5f, 0.5f, 0.5f);
+    // Front
+    glVertex3f(-0.5f, -0.5f, 0.5f);
+    glVertex3f(0.5f, -0.5f, 0.5f);
+    glVertex3f(0.5f, 0.5f, 0.5f);
+    glVertex3f(-0.5f, 0.5f, 0.5f);
+    // Back
+    glVertex3f(-0.5f, -0.5f, -0.5f);
+    glVertex3f(-0.5f, 0.5f, -0.5f);
+    glVertex3f(0.5f, 0.5f, -0.5f);
+    glVertex3f(0.5f, -0.5f, -0.5f);
+    // Left
+    glVertex3f(-0.5f, -0.5f, -0.5f);
+    glVertex3f(-0.5f, -0.5f, 0.5f);
+    glVertex3f(-0.5f, 0.5f, 0.5f);
+    glVertex3f(-0.5f, 0.5f, -0.5f);
+    // Right
+    glVertex3f(0.5f, -0.5f, -0.5f);
+    glVertex3f(0.5f, 0.5f, -0.5f);
+    glVertex3f(0.5f, 0.5f, 0.5f);
+    glVertex3f(0.5f, -0.5f, 0.5f);
+    glEnd();
+    glPopMatrix();
+
+    // Draw main body of shoe
+    glColor3fv(mainColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    
+    // Front part (toe box)
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.6f);
+    glScalef(1.0f, 0.8f, 1.0f);
+    GLUquadricObj* toebox = gluNewQuadric();
+    gluSphere(toebox, 0.5, 20, 20);
+    gluDeleteQuadric(toebox);
+    glPopMatrix();
+
+    // Middle part
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, -0.2f);
+    glScalef(0.8f, 1.0f, 1.8f);
+    glBegin(GL_QUADS);
+    // Sides
+    glVertex3f(-0.5f, -0.5f, -0.5f);
+    glVertex3f(-0.5f, 0.3f, -0.5f);
+    glVertex3f(-0.5f, 0.3f, 0.5f);
+    glVertex3f(-0.5f, -0.5f, 0.5f);
+
+    glVertex3f(0.5f, -0.5f, -0.5f);
+    glVertex3f(0.5f, 0.3f, -0.5f);
+    glVertex3f(0.5f, 0.3f, 0.5f);
+    glVertex3f(0.5f, -0.5f, 0.5f);
+
+    // Top
+    glVertex3f(-0.5f, 0.3f, -0.5f);
+    glVertex3f(0.5f, 0.3f, -0.5f);
+    glVertex3f(0.5f, 0.3f, 0.5f);
+    glVertex3f(-0.5f, 0.3f, 0.5f);
+    glEnd();
+    glPopMatrix();
+
+    // Draw laces (make them longer for boots)
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.3f, 0.0f);
+    for (int i = -2; i <= 2; i++) {
+        glBegin(GL_LINES);
+        glVertex3f(-0.3f, 0.0f, i * 0.1f);
+        glVertex3f(0.3f, 0.0f, i * 0.1f);
+        glEnd();
+    }
+    // Boot laces up the shaft
+    for (int j = 1; j <= 8; ++j) {
+        float y = j * 0.22f;
+        glBegin(GL_LINES);
+        glVertex3f(-0.18f, y, 0.0f);
+        glVertex3f(0.18f, y, 0.0f);
+        glEnd();
+    }
+    glPopMatrix();
+
+    // Draw accent stripes
+    glColor3fv(accentColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, -0.2f);
+    glBegin(GL_LINES);
+    for (int i = -1; i <= 1; i++) {
+        float z = i * 0.15f;
+        glVertex3f(-0.41f, -0.2f, z);
+        glVertex3f(-0.41f, 0.3f, z);
+        glVertex3f(0.41f, -0.2f, z);
+        glVertex3f(0.41f, 0.3f, z);
+    }
+    glEnd();
+    glPopMatrix();
+
+    // Draw heel support
+    glColor3fv(mainColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.2f, -1.0f);
+    glScalef(0.8f, 1.2f, 0.8f);
+    GLUquadricObj* heel = gluNewQuadric();
+    gluCylinder(heel, 0.4, 0.5, 0.6, 20, 20);
+    gluDeleteQuadric(heel);
+    glPopMatrix();
+
+    // Draw tall boot shaft
+    glColor3fv(shaftColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.3f, -0.2f); // Start at top of shoe body
+    float shaftHeight = 2.2f; // Tall boot
+    float shaftRadius = 0.38f;
+    float shaftTopRadius = 0.48f; // Slight flare at top
+    GLUquadricObj* shaft = gluNewQuadric();
+    gluCylinder(shaft, shaftRadius, shaftTopRadius, shaftHeight, 32, 8);
+    // Draw top rim
+    glTranslatef(0.0f, 0.0f, shaftHeight);
+    gluDisk(shaft, 0.0, shaftTopRadius, 32, 1);
+    glPopMatrix();
+
+    // Draw seam/strap detail around the top
+    glColor3fv(seamColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.3f, -0.2f + shaftHeight);
+    GLUquadricObj* rim = gluNewQuadric();
+    gluDisk(rim, shaftTopRadius - 0.03f, shaftTopRadius + 0.01f, 32, 1);
+    gluDeleteQuadric(rim);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+    
+    GLfloat lightPos[] = { 5.0f, 5.0f, 5.0f, 1.0f };
+    GLfloat lightAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    GLfloat lightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    
+    glEnable(GL_NORMALIZE);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) 
+        {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            break;
+        case VK_LEFT:
+            rotationY -= 5.0f;
+            break;
+        case VK_RIGHT:
+            rotationY += 5.0f;
+            break;
+        case VK_UP:
+            rotationX -= 5.0f;
+            break;
+        case VK_DOWN:
+            rotationX += 5.0f;
+            break;
+        case 'W':
+            zoom += 0.5f;
+            break;
+        case 'S':
+            zoom -= 0.5f;
+            break;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+//--------------------------------------------------------------------
+
+bool initPixelFormat(HDC hdc)
+{
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+    pfd.cAlphaBits = 8;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+
+    pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // Set up camera position and rotation
+    glTranslatef(0.0f, 0.0f, zoom);
+    glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+    glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+    // Draw left shoe
+    glPushMatrix();
+    glTranslatef(-1.2f, 0.0f, 0.0f);
+    drawShoe(true);
+    glPopMatrix();
+
+    // Draw right shoe
+    glPushMatrix();
+    glTranslatef(1.2f, 0.0f, 0.0f);
+    drawShoe(false);
+    glPopMatrix();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    ShowWindow(hWnd, nCmdShow);
+
+    // Initialize OpenGL settings
+    glEnable(GL_DEPTH_TEST);
+    setupLighting();
+
+    // Set up projection matrix
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, 800.0f/600.0f, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+
+    // Set background color
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return true;
+}

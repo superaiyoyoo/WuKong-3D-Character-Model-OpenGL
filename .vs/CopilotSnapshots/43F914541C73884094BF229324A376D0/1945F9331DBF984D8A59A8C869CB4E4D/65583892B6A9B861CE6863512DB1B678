@@ -1,0 +1,394 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Monkey Tail - Black Myth Wukong"
+#define PI 3.14159f
+
+// Global variables for camera control
+float rotationX = 10.0f;
+float rotationY = 0.0f;
+float zoom = -8.0f;
+
+// Animation variables for realistic tail movement
+float animationTime = 0.0f;
+
+// Forward declarations
+void drawMonkeyTail();
+void drawFurStrand(float length, float thickness, float curvature);
+void drawMuscleDefinition(float radius, float length, float t);
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+
+	case WM_KEYDOWN:
+		switch (wParam) {
+		case VK_ESCAPE: PostQuitMessage(0); break;
+		case VK_LEFT:   rotationY -= 5.0f; break;
+		case VK_RIGHT:  rotationY += 5.0f; break;
+		case VK_UP:     rotationX -= 5.0f; break;
+		case VK_DOWN:   rotationX += 5.0f; break;
+		case 'W':       zoom += 0.5f; break;
+		case 'S':       zoom -= 0.5f; break;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc)
+{
+	PIXELFORMATDESCRIPTOR pfd;
+	ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+	pfd.cAlphaBits = 8;
+	pfd.cColorBits = 32;
+	pfd.cDepthBits = 24;
+	pfd.cStencilBits = 0;
+
+	pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+	pfd.iLayerType = PFD_MAIN_PLANE;
+	pfd.iPixelType = PFD_TYPE_RGBA;
+	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pfd.nVersion = 1;
+
+	// choose pixel format returns the number most similar pixel format available
+	int n = ChoosePixelFormat(hdc, &pfd);
+
+	// set pixel format returns whether it sucessfully set the pixel format
+	if (SetPixelFormat(hdc, n, &pfd))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+// Simplified function to draw a connected monkey tail with uniform coloring
+void drawMonkeyTail() {
+    // Single uniform color for the entire tail - golden-brown monkey fur
+    GLfloat tailColor[] = { 0.65f, 0.50f, 0.35f, 1.0f };  // Consistent golden-brown
+    
+    // Tail parameters
+    const int tailSegments = 25;
+    float tailLength = 5.2f;
+    float segmentLength = tailLength / tailSegments;
+    
+    // Subtle animation for liveliness
+    animationTime += 0.02f;
+    float breathingMotion = sinf(animationTime * 0.5f) * 0.1f;
+    float naturalSway = sinf(animationTime * 0.3f) * 0.15f;
+    
+    // Set uniform color for entire tail
+    glColor3fv(tailColor);
+    
+    glPushMatrix();
+    
+    // Position tail at starting location
+    glTranslatef(0.0f, 1.2f, -0.3f);
+    glRotatef(-5.0f, 1.0f, 0.0f, 0.0f);
+    
+    // Store previous segment end position for proper connection
+    float prevX = 0.0f, prevY = 0.0f, prevZ = 0.0f;
+    
+    // Draw connected tail segments
+    for (int i = 0; i < tailSegments; i++) {
+        float t = (float)i / (tailSegments - 1);
+        
+        // Calculate curve positions
+        float gravity = t * t * 1.2f;
+        float curveY = -sinf(t * PI * 1.2f) * 1.5f - gravity + breathingMotion;
+        float curveX = sinf(t * PI * 0.6f + naturalSway) * 0.8f * (1.0f - t * 0.3f);
+        float curveZ = -cosf(t * PI * 0.9f) * 1.8f;
+        
+        // Calculate radius with proper tapering
+        float baseRadius = 0.22f;
+        float tipRadius = 0.03f;
+        float currentRadius = baseRadius - (baseRadius - tipRadius) * t;
+        
+        glPushMatrix();
+        
+        // Move to current segment position
+        glTranslatef(curveX, curveY, curveZ);
+        
+        // Calculate orientation for proper segment alignment
+        if (i < tailSegments - 1) {
+            float nextT = (float)(i + 1) / (tailSegments - 1);
+            float nextGravity = nextT * nextT * 1.2f;
+            float nextY = -sinf(nextT * PI * 1.2f) * 1.5f - nextGravity + breathingMotion;
+            float nextX = sinf(nextT * PI * 0.6f + naturalSway) * 0.8f * (1.0f - nextT * 0.3f);
+            float nextZ = -cosf(nextT * PI * 0.9f) * 1.8f;
+            
+            float dirX = nextX - curveX;
+            float dirY = nextY - curveY;
+            float dirZ = nextZ - curveZ;
+            
+            float angleY = atan2f(dirX, dirZ) * 180.0f / PI;
+            float angleX = -atan2f(dirY, sqrtf(dirX*dirX + dirZ*dirZ)) * 180.0f / PI;
+            
+            glRotatef(angleY, 0, 1, 0);
+            glRotatef(angleX, 1, 0, 0);
+        }
+        
+        // Draw main segment cylinder - ensuring proper connection
+        GLUquadric* segment = gluNewQuadric();
+        gluQuadricOrientation(segment, GLU_OUTSIDE);
+        gluQuadricNormals(segment, GLU_SMOOTH);
+        
+        // Calculate next radius for seamless connection
+        float nextRadius = (i < tailSegments - 1) ? 
+            baseRadius - (baseRadius - tipRadius) * ((float)(i + 1) / (tailSegments - 1)) : 
+            tipRadius;
+        
+        // Draw cylinder segment with proper tapering for connection
+        gluCylinder(segment, currentRadius, nextRadius, segmentLength, 20, 1);
+        
+        // Add caps to ensure segments are fully connected
+        if (i == 0) {
+            // Close the base of the first segment
+            GLUquadric* baseCap = gluNewQuadric();
+            gluQuadricOrientation(baseCap, GLU_INSIDE);
+            gluDisk(baseCap, 0.0f, currentRadius, 20, 1);
+            gluDeleteQuadric(baseCap);
+        }
+        
+        gluDeleteQuadric(segment);
+        
+        // Add simplified fur texture with same color
+        int furCount = (int)((1.0f - t * 0.5f) * 12);  // Less fur toward tip
+        for (int j = 0; j < furCount; j++) {
+            float angle = j * 2.0f * PI / furCount;
+            float furX = cosf(angle) * currentRadius * 0.9f;
+            float furY = sinf(angle) * currentRadius * 0.9f;
+            
+            glPushMatrix();
+            glTranslatef(furX, furY, segmentLength * 0.5f);
+            
+            // Simple fur bumps with same color
+            GLUquadric* furBump = gluNewQuadric();
+            gluSphere(furBump, currentRadius * 0.15f, 8, 8);
+            gluDeleteQuadric(furBump);
+            glPopMatrix();
+        }
+        
+        glPopMatrix();
+        
+        // Update position for next segment to ensure connection
+        glTranslatef(curveX, curveY, curveZ);
+        
+        // Store current position
+        prevX = curveX;
+        prevY = curveY;
+        prevZ = curveZ;
+    }
+    
+    // Add tail tip with same color
+    glPushMatrix();
+    float finalT = 1.0f;
+    float finalGravity = finalT * finalT * 1.2f;
+    float finalY = -sinf(finalT * PI * 1.2f) * 1.5f - finalGravity + breathingMotion;
+    float finalX = sinf(finalT * PI * 0.6f + naturalSway) * 0.8f * (1.0f - finalT * 0.3f);
+    float finalZ = -cosf(finalT * PI * 0.9f) * 1.8f;
+    glTranslatef(finalX, finalY, finalZ);
+    
+    // Tail tip sphere with same color
+    GLUquadric* tailTip = gluNewQuadric();
+    gluSphere(tailTip, 0.05f, 16, 16);
+    gluDeleteQuadric(tailTip);
+    
+    // Simple fur tuft at the end with same color
+    for (int i = 0; i < 6; i++) {
+        float angle = i * 2.0f * PI / 6.0f;
+        float tufX = cosf(angle) * 0.08f;
+        float tufY = sinf(angle) * 0.08f;
+        float tufZ = (i % 2) * 0.04f - 0.02f;
+        
+        glPushMatrix();
+        glTranslatef(tufX, tufY, tufZ);
+        
+        // Small fur strands
+        GLUquadric* tuftStrand = gluNewQuadric();
+        gluCylinder(tuftStrand, 0.01f, 0.005f, 0.1f, 6, 1);
+        gluDeleteQuadric(tuftStrand);
+        
+        glPopMatrix();
+    }
+    
+    glPopMatrix();
+    glPopMatrix();
+}
+
+// Helper function to draw individual fur strands with natural curvature
+void drawFurStrand(float length, float thickness, float curvature) {
+    const int strandSegments = 5;
+    
+    for (int i = 0; i < strandSegments; i++) {
+        float t = (float)i / strandSegments;
+        float nextT = (float)(i + 1) / strandSegments;
+        
+        // Apply curvature for natural fur bend
+        float bend = sinf(t * PI * curvature) * length * 0.2f;
+        float nextBend = sinf(nextT * PI * curvature) * length * 0.2f;
+        
+        glPushMatrix();
+        glTranslatef(bend, 0, t * length);
+        glRotatef(curvature * 30.0f * t, 0, 0, 1);
+        
+        float currentThickness = thickness * (1.0f - t * 0.5f);  // Taper strand
+        
+        GLUquadric* strand = gluNewQuadric();
+        gluQuadricNormals(strand, GLU_SMOOTH);
+        gluCylinder(strand, currentThickness, currentThickness * 0.8f, length / strandSegments, 6, 1);
+        gluDeleteQuadric(strand);
+        
+        glPopMatrix();
+    }
+}
+
+// Helper function to add muscle definition for anatomical realism
+void drawMuscleDefinition(float radius, float length, float t) {
+    // Add subtle muscle ridges that are more prominent at the base
+    float muscleStrength = (1.0f - t) * 0.3f;  // Stronger at base
+    
+    glColor3f(0.35f * (1.0f + muscleStrength), 
+              0.28f * (1.0f + muscleStrength), 
+              0.20f * (1.0f + muscleStrength));
+    
+    for (int i = 0; i < 4; i++) {
+        float angle = i * PI / 2.0f;
+        float muscleX = cosf(angle) * radius * (0.9f + muscleStrength);
+        float muscleY = sinf(angle) * radius * (0.9f + muscleStrength);
+        
+        glPushMatrix();
+        glTranslatef(muscleX, muscleY, 0);
+        glRotatef(angle * 180.0f / PI, 0, 0, 1);
+        glScalef(0.05f * muscleStrength, 0.02f * muscleStrength, length);
+        
+        GLUquadric* muscle = gluNewQuadric();
+        gluSphere(muscle, 1.0f, 8, 8);
+        gluDeleteQuadric(muscle);
+        
+        glPopMatrix();
+    }
+}
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    GLfloat lightPos0[] = { 4.0f, 5.0f, 6.0f, 1.0f };
+    GLfloat lightAmbient0[] = { 0.3f, 0.25f, 0.2f, 1.0f };
+    GLfloat lightDiffuse0[] = { 0.95f, 0.9f, 0.8f, 1.0f };
+    GLfloat lightSpecular0[] = { 0.4f, 0.35f, 0.25f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+
+    GLfloat matShininess[] = { 12.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+void display()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+
+	// Camera setup for viewing the monkey tail
+	glTranslatef(0.0f, -2.0f, zoom);
+	glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+	glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+	// Draw the monkey tail
+	drawMonkeyTail();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+	WNDCLASSEX wc;
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.lpfnWndProc = WindowProcedure;
+	wc.lpszClassName = WINDOW_TITLE;
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+
+	if (!RegisterClassEx(&wc)) return false;
+
+	HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+		NULL, NULL, wc.hInstance, NULL);
+
+	//--------------------------------
+	//	Initialize window for OpenGL
+	//--------------------------------
+
+	HDC hdc = GetDC(hWnd);
+
+	//	initialize pixel format for the window
+	initPixelFormat(hdc);
+
+	//	get an openGL context
+	HGLRC hglrc = wglCreateContext(hdc);
+
+	//	make context current
+	if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+	//--------------------------------
+	//	End initialization
+	//--------------------------------
+
+	ShowWindow(hWnd, nCmdShow);
+
+	// Initialize OpenGL
+	glEnable(GL_DEPTH_TEST);
+	setupLighting();
+	glMatrixMode(GL_PROJECTION);
+	gluPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glClearColor(0.1f, 0.1f, 0.15f, 1.0f); // Dark blue background
+
+	MSG msg;
+	ZeroMemory(&msg, sizeof(msg));
+
+	while (true)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) break;
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		display();
+
+		SwapBuffers(hdc);
+	}
+
+	UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+	return true;
+}

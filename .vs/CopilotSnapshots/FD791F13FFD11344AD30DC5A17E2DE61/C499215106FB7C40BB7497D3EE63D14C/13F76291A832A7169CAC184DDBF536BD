@@ -1,0 +1,1139 @@
+﻿#include <Windows.h>
+#include <cmath>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+#include <vector>
+
+#pragma comment(lib, "OpenGL32.lib")
+#pragma comment(lib, "glu32.lib")
+#define WINDOW_TITLE "Wukong 3D Head"
+
+// Animation and control variables
+float g_rotation_x = 0.0f;
+float g_rotation_y = 0.0f;
+float g_rotation_z = 0.0f;
+float animationTime = 0.0f;
+bool autoRotation = false;
+float eyeBlinkTimer = 0.0f;
+float eyeBlinkState = 1.0f; // 1.0 = open, 0.0 = closed
+static const float PI = 3.14159265359f;
+
+int g_eyeMode = 0; // 0 = default eyes, 1 = new eye view
+
+
+
+// Drawing helper functions
+void drawSphere(float radius, int segments = 16)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluSphere(quad, radius, segments, segments);
+    gluDeleteQuadric(quad);
+}
+
+void drawCylinder(float radius, float height, int segments = 12)
+{
+    GLUquadric* quad = gluNewQuadric();
+    gluQuadricNormals(quad, GLU_SMOOTH);
+    gluCylinder(quad, radius, radius, height, segments, 1);
+    gluDeleteQuadric(quad);
+}
+
+void drawEllipsoid(float radiusX, float radiusY, float radiusZ, int segments = 16)
+{
+    glPushMatrix();
+    glScalef(radiusX, radiusY, radiusZ);
+    drawSphere(1.0f, segments);
+    glPopMatrix();
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam)
+        {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            break;
+        case VK_LEFT:
+        case 'A':
+            g_rotation_y -= 2.0f;
+            break;
+        case VK_RIGHT:
+        case 'D':
+            g_rotation_y += 2.0f;
+            break;
+        case VK_UP:
+        case 'W':
+            g_rotation_x -= 2.0f;
+            break;
+        case VK_DOWN:
+        case 'S':
+            g_rotation_x += 2.0f;
+            break;
+        case 'Q':
+            g_rotation_z -= 2.0f;
+            break;
+        case 'E':
+            g_rotation_z += 2.0f;
+            break;
+        case VK_SPACE:
+            autoRotation = !autoRotation;
+            break;
+        case 'R':
+            g_rotation_x = g_rotation_y = g_rotation_z = 0.0f;
+            break;
+        case '1':
+            g_eyeMode = 0;
+            break;
+        case '2':
+            g_eyeMode = 1;
+            break;
+        }
+
+
+    default:
+        break;
+    }
+
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+//--------------------------------------------------------------------
+
+bool initPixelFormat(HDC hdc)
+
+{
+
+    PIXELFORMATDESCRIPTOR pfd;
+
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+
+
+    pfd.cAlphaBits = 8;
+
+    pfd.cColorBits = 32;
+
+    pfd.cDepthBits = 24;
+
+    pfd.cStencilBits = 0;
+
+
+
+    pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+
+
+    pfd.iLayerType = PFD_MAIN_PLANE;
+
+    pfd.iPixelType = PFD_TYPE_RGBA;
+
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+
+    pfd.nVersion = 1;
+
+
+
+    // choose pixel format returns the number most similar pixel format available
+
+    int n = ChoosePixelFormat(hdc, &pfd);
+
+
+
+    // set pixel format returns whether it sucessfully set the pixel format
+
+    if (SetPixelFormat(hdc, n, &pfd))
+
+    {
+
+        return true;
+
+    }
+
+    else
+
+    {
+
+        return false;
+
+    }
+
+}
+
+//--------------------------------------------------------------------
+
+
+
+
+void drawWukongHead()
+{
+    // ENHANCED REALISTIC MONKEY HEAD SHAPE
+    // More anatomically correct monkey head proportions
+    
+    // Main cranium (back/top of head) - elongated for realistic monkey skull
+    glColor3f(0.45f, 0.26f, 0.12f);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.05f, -0.05f); // Slightly back and up
+    drawEllipsoid(0.38f, 0.42f, 0.35f, 20); // Larger, more elongated cranium
+    glPopMatrix();
+    
+    // Secondary skull ridge (realistic monkey cranium features)
+    glColor3f(0.40f, 0.22f, 0.10f); // Slightly darker for depth
+    glPushMatrix();
+    glTranslatef(0.0f, 0.15f, -0.08f); // Upper skull ridge
+    drawEllipsoid(0.32f, 0.25f, 0.28f, 16);
+    glPopMatrix();
+
+    // PROMINENT MONKEY MUZZLE/SNOUT - key realistic feature
+    glColor3f(0.98f, 0.86f, 0.74f); // White peach facial color
+    glPushMatrix();
+    glTranslatef(0.0f, -0.08f, 0.22f); // Extended forward for muzzle
+    drawEllipsoid(0.25f, 0.28f, 0.20f, 18); // Prominent muzzle projection
+    glPopMatrix();
+    
+    // Upper jaw/nose bridge area (realistic monkey nose structure)
+    glColor3f(0.95f, 0.83f, 0.71f); // Slightly different shade for variation
+    glPushMatrix();
+    glTranslatef(0.0f, -0.02f, 0.28f); // Forward nose bridge
+    drawEllipsoid(0.18f, 0.20f, 0.15f, 16);
+    glPopMatrix();
+    
+    // Lower jaw definition (realistic monkey jaw)
+    glColor3f(0.96f, 0.84f, 0.72f);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.15f, 0.18f); // Lower jaw area
+    drawEllipsoid(0.22f, 0.15f, 0.18f, 16);
+    glPopMatrix();
+    
+    // Cheek areas (realistic monkey cheek pads)
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3f(0.97f, 0.85f, 0.73f);
+        glPushMatrix();
+        glTranslatef(side * 0.18f, -0.05f, 0.15f); // Cheek positions
+        drawEllipsoid(0.12f, 0.15f, 0.12f, 14);
+        glPopMatrix();
+    }
+    
+    // Forehead ridge (realistic monkey brow ridge)
+    glColor3f(0.42f, 0.24f, 0.11f);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.12f, 0.25f); // Prominent brow ridge
+    drawEllipsoid(0.28f, 0.08f, 0.08f, 14);
+    glPopMatrix();
+}
+
+// --- Torus mesh (axis along Y) ---
+void drawTorus(float R, float r, int rings = 48, int sides = 24)
+{
+    const float PI = 3.14159265359f;
+    for (int i = 0; i < rings; ++i) {
+        float theta0 = (float)i * 2.0f * PI / rings;
+        float theta1 = (float)(i + 1) * 2.0f * PI / rings;
+        float c0 = cosf(theta0), s0 = sinf(theta0);
+        float c1 = cosf(theta1), s1 = sinf(theta1);
+
+        glBegin(GL_QUAD_STRIP);
+        for (int j = 0; j <= sides; ++j) {
+            float phi = (float)j * 2.0f * PI / sides;
+            float cp = cosf(phi), sp = sinf(phi);
+
+            // ring 0
+            float nx0 = c0 * cp, ny0 = sp, nz0 = s0 * cp;
+            float x0 = (R + r * cp) * c0;
+            float y0 = r * sp;
+            float z0 = (R + r * cp) * s0;
+            glNormal3f(nx0, ny0, nz0);
+            glVertex3f(x0, y0, z0);
+
+            // ring 1
+            float nx1 = c1 * cp, ny1 = sp, nz1 = s1 * cp;
+            float x1 = (R + r * cp) * c1;
+            float y1 = r * sp;
+            float z1 = (R + r * cp) * s1;
+            glNormal3f(nx1, ny1, nz1);
+            glVertex3f(x1, y1, z1);
+        }
+        glEnd();
+    }
+
+
+}
+
+// --- Golden circlet / fillet (金箍) with thick 3D spirals, matching reference ---
+void drawWukongCirclet()
+{
+    glPushMatrix();
+
+    // Sit on crown; slight tilt to hug head (matches your previous placement)
+    glTranslatef(0.0f, 0.20f, 0.0f);
+    glRotatef(-8.0f, 1.f, 0.f, 0.f);
+    glScalef(1.02f, 1.0f, 0.914f); // match head x/z proportions from your model
+
+    // Metal look
+    glColor3f(1.00f, 0.84f, 0.00f);
+    GLfloat spec[4] = { 0.95f, 0.85f, 0.35f, 1.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, spec);
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 72.0f);
+
+    // === Main circular band (kept) ===
+    const float majorR = 0.365f;   // wraps just outside head
+    const float minorR = 0.0165f;  // band thickness
+    drawTorus(majorR, minorR, 64, 32);
+
+    // === Front 3D curls (prominent, solid) ===
+    // Position the curl assembly to the front of the band
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, majorR + 0.005f); // sit just in front of the ring
+    glRotatef(6.0f, 1.f, 0.f, 0.f);            // tiny pitch so it faces camera nicely
+
+    // Size & separation tuned to match the image
+    float curlScale = 0.145f;   // overall radius of each spiral silhouette
+    float curlSepX = 0.145f;   // horizontal separation between spiral centers
+    float tubeR = 0.0125f;  // thickness of the spiral tube (matches band visually)
+
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+
+
+
+
+void drawTriangleHair(float width, float height, float depth)
+{
+    // Draw a simple triangular spike using OpenGL triangles
+    glBegin(GL_TRIANGLES);
+
+    // Front face
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(0.0f, height, 0.0f);     // Top point
+    glVertex3f(-width / 2, 0.0f, depth / 2); // Bottom left
+    glVertex3f(width / 2, 0.0f, depth / 2);  // Bottom right
+
+    // Back face
+    glNormal3f(0.0f, 0.0f, -1.0f);
+    glVertex3f(0.0f, height, 0.0f);      // Top point
+    glVertex3f(width / 2, 0.0f, -depth / 2); // Bottom right
+    glVertex3f(-width / 2, 0.0f, -depth / 2); // Bottom left
+
+    // Left face
+    glNormal3f(-1.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f, height, 0.0f);      // Top point
+    glVertex3f(-width / 2, 0.0f, -depth / 2); // Bottom back
+    glVertex3f(-width / 2, 0.0f, depth / 2);  // Bottom front
+
+    // Right face
+    glNormal3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f, height, 0.0f);     // Top point
+    glVertex3f(width / 2, 0.0f, depth / 2);  // Bottom front
+    glVertex3f(width / 2, 0.0f, -depth / 2); // Bottom back
+
+    glEnd();
+
+    // Draw base (square bottom)
+    glBegin(GL_QUADS);
+    glNormal3f(0.0f, -1.0f, 0.0f);
+    glVertex3f(-width / 2, 0.0f, depth / 2);
+    glVertex3f(width / 2, 0.0f, depth / 2);
+    glVertex3f(width / 2, 0.0f, -depth / 2);
+    glVertex3f(-width / 2, 0.0f, -depth / 2);
+    glEnd();
+}
+
+void drawTriangleHairWithOutline(float width, float height, float depth)
+{
+    // First draw the solid triangle
+    drawTriangleHair(width, height, depth);
+
+    // Then draw the wireframe outline
+    glColor3f(0.2f, 0.1f, 0.05f); // Darker brown for outline
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glLineWidth(2.0f);
+
+    // Draw wireframe version
+    glBegin(GL_TRIANGLES);
+
+    // Front face outline
+    glVertex3f(0.0f, height, 0.0f);     // Top point
+    glVertex3f(-width / 2, 0.0f, depth / 2); // Bottom left
+    glVertex3f(width / 2, 0.0f, depth / 2);  // Bottom right
+
+    // Back face outline
+    glVertex3f(0.0f, height, 0.0f);      // Top point
+    glVertex3f(width / 2, 0.0f, -depth / 2); // Bottom right
+    glVertex3f(-width / 2, 0.0f, -depth / 2); // Bottom left
+
+    // Left face outline
+    glVertex3f(0.0f, height, 0.0f);      // Top point
+    glVertex3f(-width / 2, 0.0f, -depth / 2); // Bottom back
+    glVertex3f(-width / 2, 0.0f, depth / 2);  // Bottom front
+
+    // Right face outline
+    glVertex3f(0.0f, height, 0.0f);     // Top point
+    glVertex3f(width / 2, 0.0f, depth / 2);  // Bottom front
+    glVertex3f(width / 2, 0.0f, -depth / 2); // Bottom back
+
+    glEnd();
+
+    // Draw base outline
+    glBegin(GL_LINE_LOOP);
+    glVertex3f(-width / 2, 0.0f, depth / 2);
+    glVertex3f(width / 2, 0.0f, depth / 2);
+    glVertex3f(width / 2, 0.0f, -depth / 2);
+    glVertex3f(-width / 2, 0.0f, -depth / 2);
+    glEnd();
+
+    // Reset to solid rendering
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glLineWidth(1.0f);
+}
+
+// Helper function to check if hair spike would collide with circlet
+bool isHairCollidingWithCirclet(float x, float y, float z, float spikeHeight) {
+    // Circlet is at Y=0.20f with radius ~0.365f and thickness ~0.0165f
+    const float circletY = 0.20f;
+    const float circletRadius = 0.365f;
+    const float circletThickness = 0.0165f;
+
+    // Calculate distance from head center
+    float distanceFromCenter = sqrt(x * x + z * z);
+
+    // Check if spike is in the circlet's zone
+    if (y <= circletY + circletThickness &&
+        y + spikeHeight >= circletY - circletThickness &&
+        distanceFromCenter >= circletRadius - 0.05f &&
+        distanceFromCenter <= circletRadius + 0.05f) {
+        return true;
+    }
+    return false;
+}
+
+// Helper function to adjust hair spike to avoid circlet collision
+void adjustHairForCirclet(float& y, float& spikeHeight, float x, float z) {
+    const float circletY = 0.20f;
+    const float circletRadius = 0.365f;
+    float distanceFromCenter = sqrt(x * x + z * z);
+
+    // If spike is near circlet radius, lower it or clip it
+    if (distanceFromCenter >= circletRadius - 0.08f && distanceFromCenter <= circletRadius + 0.08f) {
+        // Lower the hair base to avoid collision
+        y = min(y, circletY - 0.03f);
+        // Reduce spike height if it would intersect
+        float maxHeight = circletY - 0.02f - y;
+        if (maxHeight > 0.0f) {
+            spikeHeight = min(spikeHeight, maxHeight);
+        }
+        else {
+            spikeHeight = 0.05f; // Minimum visible height
+        }
+    }
+}
+
+void drawWukongHair()
+{
+    // Simplified dramatic hair: fewer, larger spikes with complete head coverage
+    glColor3f(0.45f, 0.26f, 0.12f); // same brown as head
+
+    static const float PI = 3.14159265359f;
+    const float baseRadius = 0.25f;
+
+    // ===== 1) Main dramatic spikes around head perimeter =====
+    const int numMainSpikes = 8; // Reduced from 14 for fewer, larger spikes
+    for (int i = 0; i < numMainSpikes; i++) {
+        float angle = (float)i / numMainSpikes * 2.0f * PI;
+        float x = cosf(angle) * baseRadius;
+        float z = sinf(angle) * baseRadius;
+        float y = 0.18f;
+
+        // RAISE LEFT-SIDE SPIKES ONLY (negative X values)
+        if (x < -0.1f) { // Left side of head
+            y = 0.25f; // Raised higher for left side only
+        }
+
+        float spikeHeight = 0.35f; // Larger spikes
+
+        // Enhanced collision detection - check if spike is in circlet zone
+        float distanceFromCenter = sqrt(x * x + z * z);
+        const float circletRadius = 0.365f;
+        const float circletY = 0.20f;
+
+        bool inCircletZone = (distanceFromCenter >= circletRadius - 0.10f &&
+            distanceFromCenter <= circletRadius + 0.10f &&
+            y <= circletY + 0.05f &&
+            y + spikeHeight >= circletY - 0.05f);
+
+        if (inCircletZone) {
+            float newY = circletY - 0.08f;
+            float maxAllowedHeight = circletY - 0.06f - newY;
+
+            if (maxAllowedHeight < 0.12f || newY < 0.05f) {
+                continue;
+            }
+
+            y = newY;
+            spikeHeight = maxAllowedHeight;
+            float reductionFactor = 0.85f;
+            x *= reductionFactor;
+            z *= reductionFactor;
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, z);
+        glRotatef(angle * 180.0f / PI, 0.0f, 1.0f, 0.0f);
+        glRotatef(-45.0f, 1.0f, 0.0f, 0.0f);
+        drawTriangleHairWithOutline(0.18f, spikeHeight, 0.12f); // Larger spikes
+        glPopMatrix();
+    }
+
+    // ===== 2) Prominent front-center spikes - positioned to clear circlet =====
+    {
+        const int numFrontSpikes = 3;
+        for (int i = 0; i < numFrontSpikes; i++) {
+            float offsetX = (i - 1.0f) * 0.10f;
+            float y = 0.24f;
+            float z = 0.15f; // Moved back further from circlet front
+            float spikeHeight = 0.38f;
+
+            // Apply circlet collision avoidance
+            adjustHairForCirclet(y, spikeHeight, offsetX, z);
+
+            glPushMatrix();
+            glTranslatef(offsetX, y, z);
+            glRotatef(offsetX * 20.0f, 0.0f, 1.0f, 0.0f);
+            glRotatef(-35.0f, 1.0f, 0.0f, 0.0f);
+
+            float frontScale = 1.2f - fabsf(offsetX) * 0.2f;
+            drawTriangleHairWithOutline(0.15f * frontScale, spikeHeight * frontScale, 0.10f * frontScale);
+            glPopMatrix();
+        }
+    }
+
+    // ===== 3) Top crown spike - well above circlet =====
+    glPushMatrix();
+    glTranslatef(0.0f, 0.32f, 0.0f); // Raised higher to clear circlet
+    glRotatef(-30.0f, 1.0f, 0.0f, 0.0f);
+    drawTriangleHairWithOutline(0.14f, 0.35f, 0.10f);
+    glPopMatrix();
+
+    // ===== 4) Side dramatic spikes - positioned to avoid circlet and ears =====
+    // Left - RAISED HIGHER per user request
+    glPushMatrix();
+    glTranslatef(-0.26f, 0.20f, 0.06f); // Raised from 0.15f to 0.20f for left side only
+    glRotatef(-55.0f, 0.0f, 1.0f, 0.0f);
+    glRotatef(-40.0f, 1.0f, 0.0f, 0.0f);
+    drawTriangleHairWithOutline(0.12f, 0.25f, 0.08f);
+    glPopMatrix();
+    // Right - UNCHANGED
+    glPushMatrix();
+    glTranslatef(0.26f, 0.15f, 0.06f); // Kept at original 0.15f for right side
+    glRotatef(55.0f, 0.0f, 1.0f, 0.0f);
+    glRotatef(-40.0f, 1.0f, 0.0f, 0.0f);
+    drawTriangleHairWithOutline(0.12f, 0.25f, 0.08f);
+    glPopMatrix();
+
+    // ===== 5) Secondary medium spikes with collision detection =====
+    const int numSecondarySpikes = 10;
+    for (int i = 0; i < numSecondarySpikes; i++) {
+        float angle = ((float)i + 0.5f) / numSecondarySpikes * 2.0f * PI;
+        float x = cosf(angle) * baseRadius * 0.60f;
+        float z = sinf(angle) * baseRadius * 0.60f;
+        float y = 0.16f;
+
+        // RAISE LEFT-SIDE SPIKES ONLY (negative X values)
+        if (x < -0.08f) { // Left side of head
+            y = 0.21f; // Raised higher for left side only
+        }
+
+        float spikeHeight = 0.24f;
+
+        // Apply circlet collision avoidance
+        adjustHairForCirclet(y, spikeHeight, x, z);
+
+        // Skip if would collide
+        if (isHairCollidingWithCirclet(x, y, z, spikeHeight)) {
+            continue;
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, z);
+        glRotatef(angle * 180.0f / PI, 0.0f, 1.0f, 0.0f);
+        glRotatef(-50.0f, 1.0f, 0.0f, 0.0f);
+        drawTriangleHairWithOutline(0.10f, spikeHeight, 0.07f);
+        glPopMatrix();
+    }
+
+    // ===== 6) Back flowing spikes (wider fan) =====
+    const int numBackSpikes = 6; // was 4
+    for (int i = 0; i < numBackSpikes; i++) {
+        float offsetX = (i - (numBackSpikes - 1) * 0.5f) * 0.075f;
+        float y = 0.18f;
+
+        // RAISE LEFT-SIDE SPIKES ONLY (negative X values)
+        if (offsetX < -0.05f) { // Left side of head
+            y = 0.23f; // Raised higher for left side only
+        }
+
+        glPushMatrix();
+        glTranslatef(offsetX, y, -0.22f);
+        glRotatef(180.0f + offsetX * 15.0f, 0.0f, 1.0f, 0.0f);
+        glRotatef(-25.0f, 1.0f, 0.0f, 0.0f);
+        drawTriangleHairWithOutline(0.09f, 0.22f, 0.06f);
+        glPopMatrix();
+    }
+
+    // ===== 7) NEW Outer mane layer (second ring, slightly higher & steeper) =====
+    const int numOuterSpikes = 10;
+    const float outerRadius = baseRadius * 1.20f; // a touch farther out
+    for (int i = 0; i < numOuterSpikes; i++) {
+        float angle = (float)i / numOuterSpikes * 2.0f * PI;
+
+        // Avoid tight collision near ears (skip near +/-90°)
+        float s = sinf(angle);
+        if (fabsf(s) > 0.95f) continue; // leaves a small gap around ears
+
+        float x = cosf(angle) * outerRadius;
+        float z = sinf(angle) * outerRadius;
+        float y = 0.22f;
+
+        // RAISE LEFT-SIDE SPIKES ONLY (negative X values)
+        if (x < -0.10f) { // Left side of head
+            y = 0.27f; // Raised higher for left side only
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, z);
+        glRotatef(angle * 180.0f / PI + 8.0f, 0.0f, 1.0f, 0.0f); // slight twist
+        glRotatef(-58.0f, 1.0f, 0.0f, 0.0f); // steeper = “mane”
+        drawTriangleHairWithOutline(0.15f, 0.34f, 0.10f);
+        glPopMatrix();
+    }
+
+    // ===== 8) NEW Small filler spikes (between gaps for fullness) =====
+    const int numFillers = 16;
+    for (int i = 0; i < numFillers; i++) {
+        float angle = (float)i / numFillers * 2.0f * PI;
+        float x = cosf(angle) * baseRadius * 0.80f;
+        float z = sinf(angle) * baseRadius * 0.80f;
+        float y = 0.15f;
+
+        // RAISE LEFT-SIDE SPIKES ONLY (negative X values)
+        if (x < -0.08f) { // Left side of head
+            y = 0.20f; // Raised higher for left side only
+        }
+
+        glPushMatrix();
+        glTranslatef(x, y, z);
+        glRotatef(angle * 180.0f / PI, 0.0f, 1.0f, 0.0f);
+        glRotatef(-40.0f, 1.0f, 0.0f, 0.0f);
+        drawTriangleHairWithOutline(0.07f, 0.16f, 0.05f);
+        glPopMatrix();
+    }
+
+    // ===== 9) (Optional) Subtle top ridge wisps (short, forward-leaning fringe) =====
+    for (int i = -2; i <= 2; i++) {
+        float offsetX = i * 0.06f;
+        float y = 0.26f;
+
+        // RAISE LEFT-SIDE SPIKES ONLY (negative X values)
+        if (offsetX < -0.04f) { // Left side of head
+            y = 0.31f; // Raised higher for left side only
+        }
+
+        glPushMatrix();
+        glTranslatef(offsetX, y, 0.12f);
+        glRotatef(offsetX * 10.0f, 0.0f, 1.0f, 0.0f);
+        glRotatef(-28.0f, 1.0f, 0.0f, 0.0f); // gentle forward lean
+        drawTriangleHairWithOutline(0.06f, 0.12f, 0.045f);
+        glPopMatrix();
+    }
+}
+
+
+void drawWukongEyes()
+{
+    // ENHANCED REALISTIC MONKEY EYES
+    
+    // Eye sockets (deeper, more pronounced like real monkeys)
+    glColor3f(0.35f, 0.20f, 0.10f); // Dark brown for socket depth
+    for (int side = -1; side <= 1; side += 2) {
+        glPushMatrix();
+        glTranslatef(side * 0.16f, 0.06f, 0.30f);
+        drawEllipsoid(0.09f, 0.08f, 0.04f, 16); // Deeper eye sockets
+        glPopMatrix();
+    }
+    
+    // Eye whites (more realistic almond shape)
+    glColor3f(0.95f, 0.95f, 0.95f);
+    
+    glPushMatrix();
+    glTranslatef(-0.16f, 0.06f, 0.32f);
+    glRotatef(8.0f, 0.0f, 0.0f, 1.0f); // Slight tilt for more natural look
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawEllipsoid(0.07f, 0.055f, 0.025f, 20); // More almond-shaped
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.16f, 0.06f, 0.32f);
+    glRotatef(-8.0f, 0.0f, 0.0f, 1.0f); // Opposite tilt
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawEllipsoid(0.07f, 0.055f, 0.025f, 20);
+    glPopMatrix();
+
+    // Realistic monkey iris (brown/amber color typical of primates)
+    glColor3f(0.35f, 0.25f, 0.08f); // Natural monkey eye color
+    
+    glPushMatrix();
+    glTranslatef(-0.16f, 0.06f, 0.34f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.028f, 16); // Larger iris for realism
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.16f, 0.06f, 0.34f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.028f, 16);
+    glPopMatrix();
+    
+    // Pupils (black, realistic size)
+    glColor3f(0.05f, 0.05f, 0.05f);
+    
+    glPushMatrix();
+    glTranslatef(-0.16f, 0.06f, 0.345f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.015f, 12); // Appropriately sized pupils
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.16f, 0.06f, 0.345f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.015f, 12);
+    glPopMatrix();
+    
+    // Eye highlights for life-like appearance
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    glPushMatrix();
+    glTranslatef(-0.165f, 0.07f, 0.35f);
+    drawSphere(0.006f, 8); // Small highlight
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.155f, 0.07f, 0.35f);
+    drawSphere(0.006f, 8);
+    glPopMatrix();
+    
+    // Eyelids for more realistic appearance
+    glColor3f(0.45f, 0.26f, 0.12f); // Same as head color
+    
+    // Upper eyelids
+    for (int side = -1; side <= 1; side += 2) {
+        glPushMatrix();
+        glTranslatef(side * 0.16f, 0.08f, 0.33f);
+        drawEllipsoid(0.08f, 0.02f, 0.015f, 12);
+        glPopMatrix();
+    }
+    
+    // Lower eyelids
+    for (int side = -1; side <= 1; side += 2) {
+        glPushMatrix();
+        glTranslatef(side * 0.16f, 0.04f, 0.33f);
+        drawEllipsoid(0.08f, 0.015f, 0.01f, 12);
+        glPopMatrix();
+    }
+}
+
+// A sleeker, more dynamic "view-2" eye: narrower white, larger iris, slight inward tilt
+void drawWukongEyes_View2()
+{
+    // Eyeballs (flatter & wider; blink still driven by eyeBlinkState on Y)
+    glColor3f(0.95f, 0.95f, 0.95f);
+
+    glPushMatrix();
+    glTranslatef(-0.15f, 0.08f, 0.325f);
+    glRotatef(6.0f, 0.f, 1.f, 0.f);                 // tilt inwards slightly
+    glScalef(1.10f, eyeBlinkState * 0.80f, 1.0f);   // a bit wider, a bit shorter
+    drawEllipsoid(0.065f, 0.040f, 0.020f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.15f, 0.08f, 0.325f);
+    glRotatef(-6.0f, 0.f, 1.f, 0.f);
+    glScalef(1.10f, eyeBlinkState * 0.80f, 1.0f);
+    drawEllipsoid(0.065f, 0.040f, 0.020f);
+    glPopMatrix();
+
+    // Bigger irises/pupils, slightly forward, subtle highlight
+    // Iris (gold-brown)
+    glColor3f(0.45f, 0.28f, 0.10f);
+
+    glPushMatrix();
+    glTranslatef(-0.15f, 0.08f, 0.345f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.022f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.15f, 0.08f, 0.345f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.022f);
+    glPopMatrix();
+
+    // Pupils (black)
+    glColor3f(0.05f, 0.05f, 0.05f);
+    glPushMatrix();
+    glTranslatef(-0.15f, 0.08f, 0.352f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.012f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.15f, 0.08f, 0.352f);
+    glScalef(1.0f, eyeBlinkState, 1.0f);
+    drawSphere(0.012f);
+    glPopMatrix();
+
+    // Tiny specular highlight (white)
+    glColor3f(1.f, 1.f, 1.f);
+    glPushMatrix();
+    glTranslatef(-0.162f, 0.092f, 0.357f);
+    drawSphere(0.0045f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.138f, 0.092f, 0.357f);
+    drawSphere(0.0045f);
+    glPopMatrix();
+}
+
+void drawWukongMouth()
+{
+    // Position: slightly below the eyes, centered on face
+    // We'll layer: outer lips -> inner mouth -> lip highlight -> mouth corners
+
+    // Outer lips (base)
+    glColor3f(0.80f, 0.35f, 0.35f); // muted red
+    glPushMatrix();
+    glTranslatef(0.0f, -0.12f, 0.330f);
+    drawEllipsoid(0.110f, 0.045f, 0.010f); // wide & thin
+    glPopMatrix();
+
+    // Inner mouth (darker, slightly inset forward)
+    glColor3f(0.05f, 0.05f, 0.05f);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.12f, 0.335f);
+    drawEllipsoid(0.090f, 0.028f, 0.012f);
+    glPopMatrix();
+
+    // Subtle upper-lip highlight
+    glColor3f(0.90f, 0.55f, 0.55f);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.103f, 0.338f);
+    drawEllipsoid(0.085f, 0.012f, 0.008f);
+    glPopMatrix();
+
+    // Mouth corners (small spheres give a smile hint)
+    glColor3f(0.75f, 0.30f, 0.30f);
+    glPushMatrix();
+    glTranslatef(-0.095f, -0.12f, 0.335f);
+    drawSphere(0.008f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.095f, -0.12f, 0.335f);
+    drawSphere(0.008f);
+    glPopMatrix();
+}
+
+void drawWukongMouth_View2()
+{
+    // Enhanced mouth design with better proportions and more appealing look
+    // Multi-layered approach: base mouth -> upper/lower lips -> inner details -> subtle highlights
+
+    const float z = 0.340f;
+
+    // ---- 1) Base mouth shape (main mouth opening with natural curve)
+    glColor3f(0.65f, 0.25f, 0.28f); // Natural lip color
+    glPushMatrix();
+    glTranslatef(0.0f, -0.125f, z);
+    drawEllipsoid(0.105f, 0.038f, 0.012f); // Main mouth shape
+    glPopMatrix();
+
+    // ---- 2) Inner mouth (darker interior)
+    glColor3f(0.15f, 0.05f, 0.08f);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.125f, z + 0.008f);
+    drawEllipsoid(0.085f, 0.025f, 0.008f); // Inner mouth opening
+    glPopMatrix();
+
+    // ---- 3) Upper lip definition (creates lip line)
+    glColor3f(0.75f, 0.35f, 0.38f);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.112f, z + 0.010f);
+    drawEllipsoid(0.095f, 0.015f, 0.006f); // Upper lip highlight
+    glPopMatrix();
+
+    // ---- 4) Lower lip fullness
+    glColor3f(0.70f, 0.30f, 0.33f);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.138f, z + 0.008f);
+    drawEllipsoid(0.090f, 0.018f, 0.008f); // Lower lip
+    glPopMatrix();
+
+    // ---- 5) Mouth corners (subtle smile indication)
+    glColor3f(0.60f, 0.20f, 0.25f);
+    glPushMatrix();
+    glTranslatef(-0.092f, -0.125f, z + 0.005f);
+    drawSphere(0.008f); // Left corner
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.092f, -0.125f, z + 0.005f);
+    drawSphere(0.008f); // Right corner
+    glPopMatrix();
+
+    // ---- 6) Subtle lip center indentation (philtrum effect)
+    glColor3f(0.55f, 0.15f, 0.20f);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.108f, z + 0.012f);
+    drawEllipsoid(0.012f, 0.008f, 0.004f); // Center dip
+    glPopMatrix();
+
+    // ---- 7) Tiny highlight for realism
+    glColor3f(0.95f, 0.75f, 0.75f);
+    glPushMatrix();
+    glTranslatef(-0.025f, -0.115f, z + 0.013f);
+    drawSphere(0.004f); // Small highlight
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.025f, -0.115f, z + 0.013f);
+    drawSphere(0.004f); // Small highlight
+    glPopMatrix();
+}
+
+void drawEyes()
+{
+    // drawWukongEyes();
+    // drawWukongMouth();
+
+    if (g_eyeMode == 0) {
+        drawWukongEyes();
+        drawWukongMouth();
+    }
+    else {
+        drawWukongEyes_View2();
+        drawWukongMouth_View2();
+    }
+
+}
+
+// === Cartoon Monkey Ears (like the reference image) ===
+void drawWukongEars()
+{
+    // Placement (tweak if your head size/position differs)
+    const float earOffX = 0.385f;   // left/right from head center
+    const float earY = 0.030f;   // vertical alignment
+    const float earZ = 0.150f;   // forward/back (closer to camera -> larger)
+    const float yawDeg = 10.0f;    // slight outward yaw for readability
+
+    // Sizes (outer disc vs inner disc)
+    const float outerR = 0.115f;   // outer "brown" ring radius (X/Y)
+    const float innerR = 0.080f;   // inner "peach" radius
+    const float thickness = 0.024f;   // Z thickness for discs
+
+    // Colors (match the reference)
+    const GLfloat colOuter[3] = { 0.45f, 0.26f, 0.12f }; // dark brown ring
+    const GLfloat colInner[3] = { 0.98f, 0.86f, 0.74f }; // peach center
+    const GLfloat colShadow[3] = { 0.30f, 0.16f, 0.08f }; // soft rim shadow
+    const GLfloat colHighlight[3] = { 1.00f, 1.00f, 1.00f };
+
+    auto Ear = [&](float side)
+        {
+            glPushMatrix();
+            glTranslatef(side * earOffX, earY, earZ);
+            glRotatef(-side * yawDeg, 0.f, 1.f, 0.f);   // slight yaw
+            glRotatef(4.0f, 1.f, 0.f, 0.f);             // tiny pitch for appeal
+
+            // --- Outer disc (brown ring) ---
+            glColor3fv(colOuter);
+            drawEllipsoid(outerR, outerR, thickness);
+
+            // subtle shadow band near bottom of ring (adds depth like the reference)
+            glPushMatrix();
+            glTranslatef(0.f, -0.020f, 0.002f);
+            glColor3fv(colShadow);
+            drawEllipsoid(outerR * 0.98f, outerR * 0.30f, thickness * 0.7f);
+            glPopMatrix();
+
+            // --- Inner disc (peach center), pulled slightly forward to create a ring look
+            glPushMatrix();
+            glTranslatef(0.f, 0.f, 0.006f);
+            glColor3fv(colInner);
+            drawEllipsoid(innerR, innerR, thickness * 0.9f);
+            glPopMatrix();
+
+            // tiny specular highlight (top-left) so it pops under lights
+            glPushMatrix();
+            glTranslatef(-innerR * 0.40f, innerR * 0.40f, 0.010f);
+            glColor3fv(colHighlight);
+            drawEllipsoid(innerR * 0.18f, innerR * 0.10f, thickness * 0.5f);
+            glPopMatrix();
+
+            glPopMatrix();
+        };
+
+    Ear(-1.f); // left
+    Ear(+1.f); // right
+}
+
+void updateBlinkAnimation()
+{
+    eyeBlinkTimer += 0.02f;
+
+    // Random blinking every 2-4 seconds
+    if (eyeBlinkTimer > 3.0f + sin(animationTime) * 1.0f) {
+        eyeBlinkState = 0.1f; // Almost closed
+        if (eyeBlinkTimer > 3.2f + sin(animationTime) * 1.0f) {
+            eyeBlinkState = 1.0f; // Open
+            eyeBlinkTimer = 0.0f;
+        }
+    }
+}
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    // Enable lighting
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    // Set up lighting
+    GLfloat lightPos[] = { 2.0f, 2.0f, 3.0f, 1.0f };
+    GLfloat lightAmbient[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+    GLfloat lightDiffuse[] = { 1.0f, 1.0f, 0.9f, 1.0f };
+    GLfloat lightSpecular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    // Camera positioning
+    glTranslatef(0.0f, 0.0f, -2.5f);
+
+    // Auto rotation
+    if (autoRotation) {
+        g_rotation_y += 0.3f;
+    }
+
+    // Apply rotations
+    glRotatef(g_rotation_x, 1.0f, 0.0f, 0.0f);
+    glRotatef(g_rotation_y, 0.0f, 1.0f, 0.0f);
+    glRotatef(g_rotation_z, 0.0f, 0.0f, 1.0f);
+
+    // Update animations
+    animationTime += 0.02f;
+    updateBlinkAnimation();
+
+    // Draw simple facial features only - no swelling elements
+    drawWukongHead();
+    drawWukongHair();
+    drawWukongCirclet();
+    drawEyes(); // This function handles both eyes and mouth based on g_eyeMode
+    drawWukongEars();
+
+
+    glDisable(GL_LIGHTING);
+}
+
+//--------------------------------------------------------------------
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        850, 10, 800, 800,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+
+    initPixelFormat(hdc);
+
+    // get an openGL context
+    HGLRC hglrc = wglCreateContext(hdc);
+
+    // make context current
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    // Set up OpenGL viewport and projection matrix
+    RECT rect;
+    GetClientRect(hWnd, &rect);
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+
+    glViewport(0, 0, width, height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0, (float)width / (float)height, 0.1, 100.0);
+
+    // Initialize modelview matrix
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    // Set clear color and enable smooth shading
+    glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_NORMALIZE);
+
+    ShowWindow(hWnd, nCmdShow);
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        // Update animation timing
+        animationTime += 0.016f; // ~60 FPS timing
+        if (animationTime > 6.28318f) { // 2 * PI
+            animationTime -= 6.28318f;
+        }
+
+        display();
+        SwapBuffers(hdc);
+    }
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+    return true;
+}

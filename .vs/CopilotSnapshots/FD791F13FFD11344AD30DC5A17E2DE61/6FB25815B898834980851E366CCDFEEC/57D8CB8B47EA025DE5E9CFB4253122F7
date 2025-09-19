@@ -1,0 +1,1769 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Monkey Tail - Black Myth Wukong"
+#define PI 3.14159f
+
+// Global variables for camera control
+float rotationX = 10.0f;
+float rotationY = 0.0f;
+float zoom = -8.0f;
+
+// Animation variables for realistic tail movement
+float animationTime = 0.0f;
+
+// Forward declarations
+void drawMonkeyTail();
+void drawSimpleLegs();
+void drawSimpleLeg(bool isLeft);
+void drawSimpleFoot(bool isLeft);
+void drawSimpleToe(float length, float width);
+void drawFurStrand(float length, float thickness, float curvature);
+void drawMuscleDefinition(float radius, float length, float t);
+void drawUpperBody();
+void drawMuscularUpperTorso();
+void drawSimpleHead();
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+
+	case WM_KEYDOWN:
+		switch (wParam) {
+		case VK_ESCAPE: PostQuitMessage(0); break;
+		case VK_LEFT:   rotationY -= 5.0f; break;
+		case VK_RIGHT:  rotationY += 5.0f; break;
+		case VK_UP:     rotationX -= 5.0f; break;
+		case VK_DOWN:   rotationX += 5.0f; break;
+		case 'W':       zoom += 0.5f; break;
+		case 'S':       zoom -= 0.5f; break;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+bool initPixelFormat(HDC hdc)
+{
+	PIXELFORMATDESCRIPTOR pfd;
+	ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+	pfd.cAlphaBits = 8;
+	pfd.cColorBits = 32;
+	pfd.cDepthBits = 24;
+	pfd.cStencilBits = 0;
+
+	pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+	pfd.iLayerType = PFD_MAIN_PLANE;
+	pfd.iPixelType = PFD_TYPE_RGBA;
+	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pfd.nVersion = 1;
+
+	// choose pixel format returns the number most similar pixel format available
+	int n = ChoosePixelFormat(hdc, &pfd);
+
+	// set pixel format returns whether it sucessfully set the pixel format
+	if (SetPixelFormat(hdc, n, &pfd))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void drawMonkeyTail() {
+    // Authentic monkey fur colors - based on real macaque and baboon patterns
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights  
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows
+    GLfloat furTip[] = { 0.25f, 0.15f, 0.08f, 1.0f };          // Very dark tip
+    GLfloat furUnderside[] = { 0.75f, 0.55f, 0.35f, 1.0f };    // Lighter underside
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };        // Pink skin patches
+    GLfloat muscleRidge[] = { 0.35f, 0.22f, 0.12f, 1.0f };     // Muscle definition
+    GLfloat vertebraeColor[] = { 0.38f, 0.25f, 0.15f, 1.0f };  // Vertebrae bumps
+    
+    // Enhanced monkey tail parameters - uniform thickness with improved movement
+    const int tailSegments = 60;  // More segments for ultra-smooth motion
+    float tailLength = 7.5f;       // Longer for dramatic movement
+    float segmentLength = tailLength / tailSegments;
+    
+    // UNIFORM THICKNESS - Same radius throughout the entire tail
+    float uniformRadius = 0.15f;  // Consistent thickness from base to tip
+    
+    // Enhanced movement patterns with improved functionality
+    animationTime += 0.015f;
+    float primaryWave = sinf(animationTime * 0.4f) * 0.8f;        // Main movement wave
+    float secondaryWave = sinf(animationTime * 0.6f) * 0.4f;      // Secondary wave for complexity
+    float spiralMotion = sinf(animationTime * 0.25f) * 1.2f;      // Spiral movement
+    float whipMotion = sinf(animationTime * 0.8f) * 0.6f;        // Quick whip-like motion
+    float breathingMotion = sinf(animationTime * 0.3f) * 0.05f;   // Subtle breathing
+    
+    glPushMatrix();
+    
+    // Position at anatomically correct monkey tail base
+    glTranslatef(0.0f, 1.1f, -0.8f);  
+    glRotatef(-12.0f, 1.0f, 0.0f, 0.0f); // Optimized angle for movement display
+    
+    // Draw uniform thickness monkey tail with enhanced movement
+    for (int i = 0; i < tailSegments; i++) {
+        float t = (float)i / (tailSegments - 1);
+        
+        // Enhanced biomechanical movement with multi-directional capability
+        float gravity = t * t * 0.4f;  // Natural hanging effect
+        float flexibility = sinf(t * PI) * 0.8f;  // Maximum flexibility in middle
+        
+        // Multi-directional movement calculations
+        float verticalMotion = primaryWave * flexibility * sinf(t * PI * 1.5f);
+        float horizontalMotion = secondaryWave * flexibility * cosf(t * PI * 1.2f);
+        float spiralX = spiralMotion * flexibility * sinf(t * PI * 2.0f + animationTime * 0.5f);
+        float spiralZ = spiralMotion * flexibility * cosf(t * PI * 2.0f + animationTime * 0.5f);
+        float whipEffect = whipMotion * t * t * sinf(animationTime * 1.5f + t * PI * 3.0f);
+        
+        // Combined step calculations for enhanced movement
+        float stepY = -gravity * 0.15f + verticalMotion * 0.12f + breathingMotion * (1.0f - t * 0.5f);
+        float stepX = horizontalMotion * 0.1f + spiralX * 0.08f + whipEffect * 0.06f;
+        float stepZ = -t * 0.08f + spiralZ * 0.08f + whipEffect * 0.04f;
+        
+        // Uniform thickness throughout
+        float currentRadius = uniformRadius;
+        float nextRadius = uniformRadius;  // Always the same for uniform appearance
+        
+        // Enhanced fur color patterns with position-based variation
+        float dorsalVentral = stepY + 1.0f;  
+        float colorVariation = (sinf(t * PI * 8.0f + animationTime) + 1.0f) * 0.5f;
+        float lightExposure = (dorsalVentral + stepX + 2.0f) / 4.0f;
+        
+        // Dynamic coloration based on movement and position
+        if (t > 0.85f) {
+            glColor3fv(furTip);  // Darker tip for visual distinction
+        } else if (dorsalVentral < 0.3f) {
+            glColor3fv(furUnderside);  // Lighter underside
+        } else if (lightExposure > 0.7f && colorVariation > 0.6f) {
+            glColor3fv(furLight);  // Dynamic light areas
+        } else if (lightExposure < 0.3f || colorVariation < 0.25f) {
+            glColor3fv(furDark);   // Shadow areas
+        } else {
+            glColor3fv(furBase);   // Base color
+        }
+        
+        glPushMatrix();
+        
+        // Apply movement transformations
+        glTranslatef(stepX, stepY, stepZ);
+        
+        // Enhanced rotational movement for natural tail flexibility
+        float rotationZ = primaryWave * t * 15.0f + secondaryWave * t * 8.0f;
+        float rotationX = spiralMotion * t * t * 12.0f;
+        float rotationY = whipEffect * t * 10.0f;
+        
+        glRotatef(rotationZ, 0, 0, 1);
+        glRotatef(rotationX, 1, 0, 0);
+        glRotatef(rotationY, 0, 1, 0);
+        
+        // Calculate orientation for natural flow
+        if (i < tailSegments - 1) {
+            float nextT = (float)(i + 1) / (tailSegments - 1);
+            float nextGravity = nextT * nextT * 0.4f;
+            float nextFlexibility = sinf(nextT * PI) * 0.8f;
+            
+            float nextVertical = primaryWave * nextFlexibility * sinf(nextT * PI * 1.5f);
+            float nextHorizontal = secondaryWave * nextFlexibility * cosf(nextT * PI * 1.2f);
+            float nextSpiralX = spiralMotion * nextFlexibility * sinf(nextT * PI * 2.0f + animationTime * 0.5f);
+            float nextSpiralZ = spiralMotion * nextFlexibility * cosf(nextT * PI * 2.0f + animationTime * 0.5f);
+            float nextWhip = whipMotion * nextT * nextT * sinf(animationTime * 1.5f + nextT * PI * 3.0f);
+            
+            float nextStepY = -nextGravity * 0.15f + nextVertical * 0.12f + breathingMotion * (1.0f - nextT * 0.5f);
+            float nextStepX = nextHorizontal * 0.1f + nextSpiralX * 0.08f + nextWhip * 0.06f;
+            float nextStepZ = -nextT * 0.08f + nextSpiralZ * 0.08f + nextWhip * 0.04f;
+            
+            float dirX = nextStepX - stepX;
+            float dirY = nextStepY - stepY;
+            float dirZ = nextStepZ - stepZ;
+            
+            if (dirX != 0 || dirY != 0 || dirZ != 0) {
+                float angleY = atan2f(dirX, dirZ) * 180.0f / PI;
+                float angleX = -atan2f(dirY, sqrtf(dirX*dirX + dirZ*dirZ)) * 180.0f / PI;
+                
+                glRotatef(angleY, 0, 1, 0);
+                glRotatef(angleX, 1, 0, 0);
+            }
+        }
+        
+        // Draw main tail segment with uniform thickness
+        GLUquadric* segment = gluNewQuadric();
+        gluQuadricOrientation(segment, GLU_OUTSIDE);
+        gluQuadricNormals(segment, GLU_SMOOTH);
+        gluQuadricTexture(segment, GL_TRUE);
+        gluCylinder(segment, currentRadius, nextRadius, segmentLength, 28, 1);  // Higher resolution
+        
+        // Perfect end caps for seamless connection
+        if (i == 0) {
+            GLUquadric* baseCap = gluNewQuadric();
+            gluQuadricOrientation(baseCap, GLU_INSIDE);
+            gluDisk(baseCap, 0.0f, currentRadius, 28, 1);
+            gluDeleteQuadric(baseCap);
+        }
+        
+        if (i == tailSegments - 1) {
+            glPushMatrix();
+            glTranslatef(0.0f, 0.0f, segmentLength);
+            GLUquadric* endCap = gluNewQuadric();
+            gluQuadricOrientation(endCap, GLU_OUTSIDE);
+            gluDisk(endCap, 0.0f, nextRadius, 28, 1);
+            gluDeleteQuadric(endCap);
+            glPopMatrix();
+        }
+        
+        gluDeleteQuadric(segment);
+        
+        // Enhanced fur patterns with movement-responsive density
+        if (i % 2 == 0) {  
+            int furCount = (int)(18 - t * 6);  // Slightly less fur toward tip
+            for (int j = 0; j < furCount; j++) {
+                float angle = j * 2.0f * PI / furCount;
+                float furOffset = (sinf(animationTime * 3.0f + j + i) + 1.0f) * 0.02f;  // Dynamic fur movement
+                float furRadius = currentRadius * (1.03f + furOffset);
+                float furX = cosf(angle) * furRadius;
+                float furY = sinf(angle) * furRadius;
+                float furZ = segmentLength * ((j % 5) * 0.2f + 0.1f);
+                
+                // Dynamic fur coloration
+                if (furY < 0) {
+                    glColor3fv(furUnderside);
+                } else if (j % 4 == 0) {
+                    glColor3fv(furLight);
+                } else if (j % 7 == 0) {
+                    glColor3fv(furDark);
+                }
+                
+                glPushMatrix();
+                glTranslatef(furX, furY, furZ);
+                
+                GLUquadric* furTuft = gluNewQuadric();
+                gluQuadricNormals(furTuft, GLU_SMOOTH);
+                float furSize = currentRadius * (0.09f + (j % 4) * 0.02f);
+                gluSphere(furTuft, furSize, 10, 10);
+                gluDeleteQuadric(furTuft);
+                glPopMatrix();
+            }
+        }
+        
+        // Enhanced vertebrae definition
+        if (t < 0.8f && i % 3 == 0) {  
+            glColor3fv(vertebraeColor);
+            for (int v = 0; v < 8; v++) {  
+                float vertAngle = v * PI / 4.0f;
+                float vertX = cosf(vertAngle) * currentRadius * 1.02f;
+                float vertY = sinf(vertAngle) * currentRadius * 1.02f;
+                
+                glPushMatrix();
+                glTranslatef(vertX, vertY, segmentLength * 0.5f);
+                GLUquadric* vertebra = gluNewQuadric();
+                gluSphere(vertebra, currentRadius * 0.05f, 10, 10);
+                gluDeleteQuadric(vertebra);
+                glPopMatrix();
+            }
+        }
+        
+        // Enhanced muscle definition
+        if (t < 0.6f && i % 4 == 0) {  
+            glColor3fv(muscleRidge);
+            for (int m = 0; m < 10; m++) {  
+                float muscleAngle = m * PI / 5.0f;
+                float muscleX = cosf(muscleAngle) * currentRadius * 0.99f;
+                float muscleY = sinf(muscleAngle) * currentRadius * 0.99f;
+                
+                glPushMatrix();
+                glTranslatef(muscleX, muscleY, segmentLength * 0.35f);
+                GLUquadric* muscle = gluNewQuadric();
+                gluSphere(muscle, currentRadius * 0.05f, 10, 10);
+                gluDeleteQuadric(muscle);
+                glPopMatrix();
+            }
+        }
+        
+        // Skin patches near tip
+        if (t > 0.75f && i % 8 == 0) {  
+            glColor3fv(skinPink);
+            for (int s = 0; s < 4; s++) {
+                float skinAngle = s * PI / 2.0f;
+                float skinX = cosf(skinAngle) * currentRadius * 0.88f;
+                float skinY = sinf(skinAngle) * currentRadius * 0.88f;
+                
+                glPushMatrix();
+                glTranslatef(skinX, skinY, segmentLength * 0.6f);
+                GLUquadric* skinPatch = gluNewQuadric();
+                gluSphere(skinPatch, currentRadius * 0.025f, 10, 10);
+                gluDeleteQuadric(skinPatch);
+                glPopMatrix();
+            }
+        }
+        
+        glPopMatrix();
+        
+        // Move to next position for perfect continuity
+        glTranslatef(stepX, stepY, stepZ);
+    }
+    
+    // Enhanced tail tip with uniform thickness
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, segmentLength);
+    
+    // Larger tip pad maintaining uniform thickness
+    glColor3fv(skinPink);
+    GLUquadric* tipCore = gluNewQuadric();
+    gluSphere(tipCore, uniformRadius * 0.8f, 24, 24);  // Proportional to uniform thickness
+    gluDeleteQuadric(tipCore);
+    
+    // Enhanced ridges for better grip
+    for (int r = 0; r < 10; r++) {  
+        float ridgeAngle = r * PI / 5.0f;
+        float ridgeX = cosf(ridgeAngle) * uniformRadius * 0.6f;
+        float ridgeY = sinf(ridgeAngle) * uniformRadius * 0.6f;
+        
+        glColor3fv(furTip);
+        glPushMatrix();
+        glTranslatef(ridgeX, ridgeY, uniformRadius * 0.3f);
+        GLUquadric* ridge = gluNewQuadric();
+        gluSphere(ridge, uniformRadius * 0.04f, 10, 10);
+        gluDeleteQuadric(ridge);
+        glPopMatrix();
+    }
+    
+    // Enhanced fur tuft with dynamic movement
+    for (int i = 0; i < 20; i++) {  
+        float angle = i * 2.0f * PI / 20.0f;
+        float tufRadius = uniformRadius * (0.9f + (i % 6) * 0.1f);
+        float dynamicMotion = sinf(animationTime * 2.0f + i) * 0.4f;
+        float tufX = cosf(angle) * tufRadius * (0.9f + dynamicMotion);
+        float tufY = sinf(angle) * tufRadius * (0.9f + cosf(animationTime * 2.0f + i) * 0.4f);
+        float tufZ = (i % 6) * uniformRadius * 0.15f - uniformRadius * 0.1f;
+        
+        // Enhanced color variation
+        if (i % 6 == 0) {
+            glColor3fv(furTip);
+        } else if (i % 6 == 1) {
+            glColor3fv(furDark);
+        } else if (i % 6 == 2) {
+            glColor3fv(furBase);
+        } else if (i % 6 == 3) {
+            glColor3fv(furLight);
+        } else if (i % 6 == 4) {
+            glColor3fv(furUnderside);
+        } else {
+            glColor3fv(muscleRidge);
+        }
+        
+        glPushMatrix();
+        glTranslatef(tufX, tufY, tufZ);
+        glRotatef((i % 8) * 12.0f + animationTime * 10.0f, 1, 1, 0);  // Dynamic curl
+        
+        GLUquadric* hairStrand = gluNewQuadric();
+        gluQuadricNormals(hairStrand, GLU_SMOOTH);
+        float strandLength = uniformRadius * (0.25f + (i % 6) * 0.08f);
+        gluCylinder(hairStrand, uniformRadius * 0.02f, uniformRadius * 0.005f, strandLength, 8, 1);
+        gluDeleteQuadric(hairStrand);
+        glPopMatrix();
+    }
+    
+    glPopMatrix();
+    glPopMatrix();
+}
+
+void drawFurStrand(float length, float thickness, float curvature) {
+    const int strandSegments = 3;  // Reduced for simplicity
+    
+    for (int i = 0; i < strandSegments; i++) {
+        float t = (float)i / strandSegments;
+        
+        // Apply slight curvature
+        float bend = sinf(t * PI * curvature) * length * 0.1f;
+        
+        glPushMatrix();
+        glTranslatef(bend, 0, t * length);
+        
+        float currentThickness = thickness * (1.0f - t * 0.3f);
+        
+        GLUquadric* strand = gluNewQuadric();
+        gluQuadricNormals(strand, GLU_SMOOTH);
+        gluCylinder(strand, currentThickness, currentThickness * 0.9f, length / strandSegments, 6, 1);
+        gluDeleteQuadric(strand);
+        
+        glPopMatrix();
+    }
+}
+
+void drawMuscleDefinition(float radius, float length, float t) {
+    // Subtle muscle definition using same base color, just slightly darker
+    glColor3f(0.55f, 0.40f, 0.25f);  // Slightly darker version of main color
+    
+    for (int i = 0; i < 4; i++) {
+        float angle = i * PI / 2.0f;
+        float muscleX = cosf(angle) * radius * 0.95f;
+        float muscleY = sinf(angle) * radius * 0.95f;
+        
+        glPushMatrix();
+        glTranslatef(muscleX, muscleY, 0);
+        
+        GLUquadric* muscle = gluNewQuadric();
+        gluSphere(muscle, radius * 0.05f, 6, 6);
+        gluDeleteQuadric(muscle);
+        
+        glPopMatrix();
+    }
+    
+    // Restore main tail color
+    glColor3f(0.65f, 0.50f, 0.35f);
+}
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    GLfloat lightPos0[] = { 4.0f, 5.0f, 6.0f, 1.0f };
+    GLfloat lightAmbient0[] = { 0.3f, 0.25f, 0.2f, 1.0f };
+    GLfloat lightDiffuse0[] = { 0.95f, 0.9f, 0.8f, 1.0f };
+    GLfloat lightSpecular0[] = { 0.4f, 0.35f, 0.25f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+
+    GLfloat matShininess[] = { 12.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+void display()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+
+	// Camera setup for viewing the monkey tail and vertical legs
+	glTranslatef(0.0f, -0.5f, zoom);  // Adjusted for vertical leg positioning
+	glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
+	glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+	// Draw the simple head
+	drawSimpleHead();
+	
+	// Draw the muscular upper torso above the middle body
+	drawMuscularUpperTorso();
+	
+	// Draw the simple upper body to connect tail and legs
+	drawUpperBody();
+	
+	// Draw the simple legs with proper vertical orientation
+	drawSimpleLegs();
+	
+	// Draw the monkey tail
+	drawMonkeyTail();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+	WNDCLASSEX wc;
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.lpfnWndProc = WindowProcedure;
+	wc.lpszClassName = WINDOW_TITLE;
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+
+	if (!RegisterClassEx(&wc)) return false;
+
+	HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+		NULL, NULL, wc.hInstance, NULL);
+
+	HDC hdc = GetDC(hWnd);
+
+	//	initialize pixel format for the window
+	initPixelFormat(hdc);
+
+	//	get an openGL context
+	HGLRC hglrc = wglCreateContext(hdc);
+
+	//	make context current
+	if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+	ShowWindow(hWnd, nCmdShow);
+
+	// Initialize OpenGL
+	glEnable(GL_DEPTH_TEST);
+	setupLighting();
+	glMatrixMode(GL_PROJECTION);
+	gluPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glClearColor(0.1f, 0.1f, 0.15f, 1.0f); // Dark blue background
+
+	MSG msg;
+	ZeroMemory(&msg, sizeof(msg));
+
+	while (true)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) break;
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		display();
+
+		SwapBuffers(hdc);
+	}
+
+	UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+	return true;
+}
+
+// Function to draw simple legs like the image
+void drawSimpleLegs() {
+    // Use the same authentic monkey fur colors from the tail
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights  
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows
+    GLfloat furUnderside[] = { 0.75f, 0.55f, 0.35f, 1.0f };    // Lighter underside
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };        // Pink skin patches
+    
+    // Draw left leg - positioned to the left
+    glPushMatrix();
+    glTranslatef(-0.6f, 0.0f, 0.0f);  // Position left leg
+    drawSimpleLeg(true);
+    glPopMatrix();
+    
+    // Draw right leg - positioned to the right
+    glPushMatrix();
+    glTranslatef(0.6f, 0.0f, 0.0f);   // Position right leg
+    drawSimpleLeg(false);
+    glPopMatrix();
+}
+
+// Function to draw a single realistic human-like leg
+void drawSimpleLeg(bool isLeft) {
+    // Enhanced colors with more variation for realistic skin/fur tones
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };
+    GLfloat jointColor[] = { 0.40f, 0.25f, 0.15f, 1.0f };
+    GLfloat muscleHighlight[] = { 0.55f, 0.35f, 0.22f, 1.0f };
+    GLfloat muscleDefinition[] = { 0.35f, 0.22f, 0.12f, 1.0f };
+    
+    glPushMatrix();
+    
+    // === REALISTIC UPPER LEG (THIGH) === - Human-like muscular structure
+    glColor3fv(furBase);
+    
+    // Main thigh muscle mass - larger and more defined
+    glPushMatrix();
+    glTranslatef(0.0f, 0.3f, 0.0f);  // Adjusted Y position for better connection
+    glScalef(0.35f, 0.9f, 0.35f);  // Extended height for overlap
+    GLUquadric* mainThigh = gluNewQuadric();
+    gluQuadricNormals(mainThigh, GLU_SMOOTH);
+    gluSphere(mainThigh, 1.0f, 24, 24);  // Higher resolution
+    gluDeleteQuadric(mainThigh);
+    glPopMatrix();
+    
+    // Quadriceps muscle definition (front)
+    glColor3fv(muscleHighlight);
+    for (int i = 0; i < 3; i++) {
+        float angle = (i - 1) * 0.4f;
+        glPushMatrix();
+        glTranslatef(sinf(angle) * 0.12f, 0.2f, cosf(angle) * 0.08f + 0.25f); // Adjusted Y
+        glScalef(0.08f, 0.7f, 0.12f);  // Extended height
+        GLUquadric* quad = gluNewQuadric();
+        gluQuadricNormals(quad, GLU_SMOOTH);
+        gluSphere(quad, 1.0f, 16, 16);
+        gluDeleteQuadric(quad);
+        glPopMatrix();
+    }
+    
+    // Hamstring muscles (back)
+    glColor3fv(muscleDefinition);
+    for (int i = 0; i < 2; i++) {
+        float sideOffset = (i == 0) ? -0.08f : 0.08f;
+        glPushMatrix();
+        glTranslatef(sideOffset, 0.1f, -0.2f);  // Adjusted Y
+        glScalef(0.1f, 0.8f, 0.15f);  // Extended height
+        GLUquadric* hamstring = gluNewQuadric();
+        gluQuadricNormals(hamstring, GLU_SMOOTH);
+        gluSphere(hamstring, 1.0f, 16, 16);
+        gluDeleteQuadric(hamstring);
+        glPopMatrix();
+    }
+    
+    // Outer thigh muscle (vastus lateralis)
+    glColor3fv(furLight);
+    glPushMatrix();
+    glTranslatef(0.25f, 0.0f, 0.05f);  // Adjusted Y
+    glScalef(0.12f, 0.9f, 0.2f);  // Extended height
+    GLUquadric* outerThigh = gluNewQuadric();
+    gluQuadricNormals(outerThigh, GLU_SMOOTH);
+    gluSphere(outerThigh, 1.0f, 16, 16);
+    gluDeleteQuadric(outerThigh);
+    glPopMatrix();
+    
+    // Inner thigh muscle (adductors)
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(-0.2f, -0.1f, 0.1f);  // Adjusted Y
+    glScalef(0.15f, 1.0f, 0.18f);  // Extended height
+    GLUquadric* innerThigh = gluNewQuadric();
+    gluQuadricNormals(innerThigh, GLU_SMOOTH);
+    gluSphere(innerThigh, 1.0f, 16, 16);
+    gluDeleteQuadric(innerThigh);
+    glPopMatrix();
+    
+    // === SEAMLESS THIGH-TO-KNEE TRANSITION === - Bridge connecting upper and lower leg
+    glColor3fv(jointColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.5f, 0.0f);  // Positioned between thigh and knee
+    glScalef(0.28f, 0.4f, 0.28f);  // Large transition area
+    GLUquadric* thighKneeConnector = gluNewQuadric();
+    gluQuadricNormals(thighKneeConnector, GLU_SMOOTH);
+    gluSphere(thighKneeConnector, 1.0f, 20, 20);
+    gluDeleteQuadric(thighKneeConnector);
+    glPopMatrix();
+    
+    // === ENHANCED KNEE JOINT === - More realistic knee structure with overlap
+    glPushMatrix();
+    glTranslatef(0.0f, -0.8f, 0.0f);  // Moved up for better connection
+    glColor3fv(jointColor);
+    
+    // Main knee joint - larger for seamless connection
+    GLUquadric* knee = gluNewQuadric();
+    gluQuadricNormals(knee, GLU_SMOOTH);
+    gluSphere(knee, 0.26f, 20, 20);  // Larger for better overlap
+    gluDeleteQuadric(knee);
+    
+    // Kneecap (patella)
+    glColor3fv(furLight);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.2f);
+    glScalef(0.14f, 0.17f, 0.1f);
+    GLUquadric* kneecap = gluNewQuadric();
+    gluQuadricNormals(kneecap, GLU_SMOOTH);
+    gluSphere(kneecap, 1.0f, 16, 16);
+    gluDeleteQuadric(kneecap);
+    glPopMatrix();
+    glPopMatrix();
+    
+    // === SEAMLESS KNEE-TO-CALF CONNECTOR === - Eliminates gap between knee and lower leg
+    glColor3fv(muscleHighlight);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.1f, 0.0f);  // Between knee and calf
+    glScalef(0.24f, 0.3f, 0.24f);  // Connecting bridge
+    GLUquadric* kneeCalfConnector = gluNewQuadric();
+    gluQuadricNormals(kneeCalfConnector, GLU_SMOOTH);
+    gluSphere(kneeCalfConnector, 1.0f, 18, 18);
+    gluDeleteQuadric(kneeCalfConnector);
+    glPopMatrix();
+    
+    // === REALISTIC LOWER LEG (CALF AND SHIN) === - Human-like structure with seamless connection
+    
+    // Main calf muscle (gastrocnemius) - back of leg, extended upward
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.3f, -0.05f);  // Moved up for connection
+    glScalef(0.25f, 0.9f, 0.3f);  // Extended height for overlap
+    GLUquadric* mainCalf = gluNewQuadric();
+    gluQuadricNormals(mainCalf, GLU_SMOOTH);
+    gluSphere(mainCalf, 1.0f, 20, 20);
+    gluDeleteQuadric(mainCalf);
+    glPopMatrix();
+    
+    // Split gastrocnemius heads (medial and lateral) - extended upward
+    glColor3fv(muscleHighlight);
+    for (int i = 0; i < 2; i++) {
+        float sideOffset = (i == 0) ? -0.08f : 0.08f;
+        glPushMatrix();
+        glTranslatef(sideOffset, -1.2f, 0.1f);  // Moved up
+        glScalef(0.1f, 0.7f, 0.15f);  // Extended height
+        GLUquadric* calfHead = gluNewQuadric();
+        gluQuadricNormals(calfHead, GLU_SMOOTH);
+        gluSphere(calfHead, 1.0f, 16, 16);
+        gluDeleteQuadric(calfHead);
+        glPopMatrix();
+    }
+    
+    // Soleus muscle (deeper calf muscle) - extended upward
+    glColor3fv(muscleDefinition);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.5f, -0.1f);  // Moved up
+    glScalef(0.18f, 0.6f, 0.2f);  // Extended height
+    GLUquadric* soleus = gluNewQuadric();
+    gluQuadricNormals(soleus, GLU_SMOOTH);
+    gluSphere(soleus, 1.0f, 16, 16);
+    gluDeleteQuadric(soleus);
+    glPopMatrix();
+    
+    // Shin area (tibia) - front of lower leg, extended upward
+    glColor3fv(furLight);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.4f, 0.25f);  // Moved up
+    glScalef(0.15f, 0.8f, 0.12f);  // Extended height
+    GLUquadric* shin = gluNewQuadric();
+    gluQuadricNormals(shin, GLU_SMOOTH);
+    gluSphere(shin, 1.0f, 16, 16);
+    gluDeleteQuadric(shin);
+    glPopMatrix();
+    
+    // Fibula (outer lower leg bone area) - extended upward
+    glColor3fv(furDark);
+    glPushMatrix();
+    glTranslatef(0.15f, -1.3f, 0.1f);  // Moved up
+    glScalef(0.08f, 0.9f, 0.1f);  // Extended height
+    GLUquadric* fibula = gluNewQuadric();
+    gluQuadricNormals(fibula, GLU_SMOOTH);
+    gluSphere(fibula, 1.0f, 12, 12);
+    gluDeleteQuadric(fibula);
+    glPopMatrix();
+    
+    // === COMPLETE LEG MUSCLE COVERAGE === - Fill any remaining gaps
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.9f, 0.0f);  // Mid-leg coverage
+    glScalef(0.22f, 0.5f, 0.22f);  // Complete coverage
+    GLUquadric* midLegFill = gluNewQuadric();
+    gluQuadricNormals(midLegFill, GLU_SMOOTH);
+    gluSphere(midLegFill, 1.0f, 16, 16);
+    gluDeleteQuadric(midLegFill);
+    glPopMatrix();
+    
+    // === ENHANCED ANKLE AREA === - More realistic ankle structure
+    glPushMatrix();
+    glTranslatef(0.0f, -2.1f, 0.0f);  // Moved up for better connection
+    glColor3fv(jointColor);
+    
+    // Main ankle joint - larger for better connection
+    GLUquadric* ankle = gluNewQuadric();
+    gluQuadricNormals(ankle, GLU_SMOOTH);
+    gluSphere(ankle, 0.20f, 18, 18);  // Larger for overlap
+    gluDeleteQuadric(ankle);
+    
+    // Ankle bones (malleoli) - inner and outer ankle bones
+    glColor3fv(furLight);
+    for (int i = 0; i < 2; i++) {
+        float sideOffset = (i == 0) ? -0.12f : 0.12f;
+        glPushMatrix();
+        glTranslatef(sideOffset, 0.0f, 0.0f);
+        glScalef(0.06f, 0.08f, 0.06f);
+        GLUquadric* malleolus = gluNewQuadric();
+        gluQuadricNormals(malleolus, GLU_SMOOTH);
+        gluSphere(malleolus, 1.0f, 12, 12);
+        gluDeleteQuadric(malleolus);
+        glPopMatrix();
+    }
+    glPopMatrix();
+    
+    // === SEAMLESS ANKLE CONNECTOR === - Enhanced bridge for perfect foot connection
+    glPushMatrix();
+    glTranslatef(0.0f, -2.2f, 0.0f);  // Positioned to overlap with both ankle and foot
+    glColor3fv(jointColor);
+    GLUquadric* ankleConnector = gluNewQuadric();
+    gluQuadricNormals(ankleConnector, GLU_SMOOTH);
+    gluCylinder(ankleConnector, 0.19f, 0.17f, 0.3f, 20, 1);  // Larger bridge cylinder
+    
+    // Add connector caps for complete sealing
+    GLUquadric* connectorTop = gluNewQuadric();
+    gluQuadricOrientation(connectorTop, GLU_INSIDE);
+    gluDisk(connectorTop, 0.0f, 0.19f, 20, 1);
+    gluDeleteQuadric(connectorTop);
+    
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.3f);
+    GLUquadric* connectorBottom = gluNewQuadric();
+    gluDisk(connectorBottom, 0.0f, 0.17f, 20, 1);
+    gluDeleteQuadric(connectorBottom);
+    glPopMatrix();
+    gluDeleteQuadric(ankleConnector);
+    glPopMatrix();
+    
+    // === ACHILLES TENDON === - Realistic tendon connection
+    glColor3fv(furDark);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.9f, -0.15f);  // Moved up for connection
+    glScalef(0.06f, 0.5f, 0.08f);  // Extended height
+    GLUquadric* achilles = gluNewQuadric();
+    gluQuadricNormals(achilles, GLU_SMOOTH);
+    gluSphere(achilles, 1.0f, 12, 12);
+    gluDeleteQuadric(achilles);
+    glPopMatrix();
+    
+    // === ENHANCED FOOT === - Positioned to COMPLETELY OVERLAP with ankle connector
+    glPushMatrix();
+    glTranslatef(0.0f, -2.35f, 0.0f);  // Adjusted for perfect overlap with connector
+    drawSimpleFoot(isLeft);
+    glPopMatrix();
+    
+    glPopMatrix();
+}
+
+// Function to draw a simple foot with five toes - Enhanced with seamless connections
+void drawSimpleFoot(bool isLeft) {
+    // Same colors as the tail
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };
+    GLfloat jointColor[] = { 0.40f, 0.25f, 0.15f, 1.0f };
+    
+    glPushMatrix();
+    
+    // === EXTENDED ANKLE OVERLAP === - Large overlap area to eliminate all gaps
+    glColor3fv(jointColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, 0.0f);  // Large overlap with ankle connector
+    GLUquadric* ankleOverlap = gluNewQuadric();
+    gluQuadricNormals(ankleOverlap, GLU_SMOOTH);
+    gluSphere(ankleOverlap, 0.15f, 16, 16);  // Larger overlap sphere
+    gluDeleteQuadric(ankleOverlap);
+    glPopMatrix();
+    
+    // === TRANSITION ZONE === - Smooth transition from ankle to foot
+    glPushMatrix();
+    glColor3fv(jointColor);
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    glRotatef(-90, 1, 0, 0);  // Vertical orientation
+    GLUquadric* transition = gluNewQuadric();
+    gluQuadricNormals(transition, GLU_SMOOTH);
+    gluCylinder(transition, 0.14f, 0.13f, 0.25f, 16, 1);  // Smooth transition
+    
+    // Add transition caps
+    GLUquadric* transTop = gluNewQuadric();
+    gluQuadricOrientation(transTop, GLU_INSIDE);
+    gluDisk(transTop, 0.0f, 0.14f, 16, 1);
+    gluDeleteQuadric(transTop);
+    
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.25f);
+    GLUquadric* transBottom = gluNewQuadric();
+    gluDisk(transBottom, 0.0f, 0.13f, 16, 1);
+    gluDeleteQuadric(transBottom);
+    glPopMatrix();
+    gluDeleteQuadric(transition);
+    glPopMatrix();
+    
+    // === MAIN FOOT BODY === - Enhanced shape and connection
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.2f, 0.3f);  // Positioned to overlap with transition
+    glScalef(1.0f, 0.4f, 2.2f);  // Larger proportions for better coverage
+    GLUquadric* footBody = gluNewQuadric();
+    gluQuadricNormals(footBody, GLU_SMOOTH);
+    gluSphere(footBody, 0.25f, 20, 16);
+    gluDeleteQuadric(footBody);
+    glPopMatrix();
+    
+    // === COMPLETELY SEAMLESS SOLE === - Covers entire bottom with overlaps
+    glPushMatrix();
+    glColor3fv(skinPink);
+    glTranslatef(0.0f, -0.5f, 0.3f);  // Positioned to cover everything
+    glRotatef(90, 1, 0, 0);  
+    glScalef(0.95f, 2.1f, 0.15f);  // Even larger and thicker sole
+    GLUquadric* sole = gluNewQuadric();
+    gluQuadricNormals(sole, GLU_SMOOTH);
+    
+    // Draw main sole disk - much larger
+    gluDisk(sole, 0.0f, 0.3f, 24, 1);
+    
+    // Add thick sole edge for complete coverage
+    gluQuadricOrientation(sole, GLU_OUTSIDE);
+    gluCylinder(sole, 0.3f, 0.3f, 1.0f, 24, 1);
+    
+    // Add top sole cap for complete sealing
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 1.0f);
+    gluDisk(sole, 0.0f, 0.3f, 24, 1);
+    glPopMatrix();
+    
+    gluDeleteQuadric(sole);
+    glPopMatrix();
+    
+    // === ENHANCED HEEL === - Better connection to foot body with overlap
+    glPushMatrix();
+    glColor3fv(furDark);
+    glTranslatef(0.0f, -0.15f, -0.1f);  // Overlaps with foot body
+    GLUquadric* heel = gluNewQuadric();
+    gluQuadricNormals(heel, GLU_SMOOTH);
+    gluSphere(heel, 0.25f, 16, 12);  // Larger for better coverage
+    gluDeleteQuadric(heel);
+    glPopMatrix();
+    
+    // === COMPLETE ARCH FILLING === - Fills all gaps between heel and main foot
+    glPushMatrix();
+    glColor3fv(furBase);
+    glTranslatef(0.0f, -0.25f, 0.05f);  
+    glScalef(0.8f, 0.25f, 0.7f);
+    GLUquadric* arch = gluNewQuadric();
+    gluQuadricNormals(arch, GLU_SMOOTH);
+    gluSphere(arch, 0.25f, 16, 12);
+    gluDeleteQuadric(arch);
+    glPopMatrix();
+    
+    // === SIDE COVERAGE === - Fills any remaining side gaps
+    for (int side = -1; side <= 1; side += 2) {
+        glPushMatrix();
+        glColor3fv(furBase);
+        glTranslatef(side * 0.2f, -0.2f, 0.15f);
+        glScalef(0.15f, 0.3f, 0.6f);
+        GLUquadric* sideFill = gluNewQuadric();
+        gluQuadricNormals(sideFill, GLU_SMOOTH);
+        gluSphere(sideFill, 0.25f, 12, 10);
+        gluDeleteQuadric(sideFill);
+        glPopMatrix();
+    }
+    
+    // === ENHANCED FIVE TOES === - Better proportioned and positioned
+    for (int toe = 0; toe < 5; toe++) {
+        float toeX = (toe - 2) * 0.13f;  // Better spacing
+        float toeLength = 0.18f - abs(toe - 2) * 0.025f;  // More natural variation
+        float toeWidth = 0.06f - abs(toe - 2) * 0.008f;   // Better proportions
+        
+        glPushMatrix();
+        glTranslatef(toeX, -0.15f, 0.85f);  // Better positioned on foot
+        drawSimpleToe(toeLength, toeWidth);
+        glPopMatrix();
+    }
+    
+    // === COMPLETE TOP COVERAGE === - Ensures no gaps on top of foot
+    glPushMatrix();
+    glColor3fv(furBase);
+    glTranslatef(0.0f, 0.05f, 0.2f);  
+    glScalef(0.7f, 0.2f, 1.0f);
+    GLUquadric* topCoverage = gluNewQuadric();
+    gluQuadricNormals(topCoverage, GLU_SMOOTH);
+    gluSphere(topCoverage, 0.2f, 16, 12);
+    gluDeleteQuadric(topCoverage);
+    glPopMatrix();
+}
+
+// Function to draw a simple toe - Enhanced details
+void drawSimpleToe(float length, float width) {
+    // Same colors as the tail
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };
+    GLfloat furMid[] = { 0.55f, 0.35f, 0.22f, 1.0f };  // Mid-tone color for variety
+    
+    glPushMatrix();
+    
+    // === ENHANCED TOE BODY === - Better shape and connection
+    glColor3fv(furBase);
+    glPushMatrix();
+    glScalef(width, width * 0.85f, length);  
+    GLUquadric* toeBody = gluNewQuadric();
+    gluQuadricNormals(toeBody, GLU_SMOOTH);
+    gluSphere(toeBody, 1.0f, 12, 10);
+    gluDeleteQuadric(toeBody);
+    glPopMatrix();
+    
+    // === TOE JOINT === - Mid-toe articulation
+    glPushMatrix();
+    glColor3fv(furMid);
+    glTranslatef(0.0f, 0.0f, length * 0.6f);
+    GLUquadric* toeJoint = gluNewQuadric();
+    gluQuadricNormals(toeJoint, GLU_SMOOTH);
+    gluSphere(toeJoint, width * 0.8f, 10, 8);
+    gluDeleteQuadric(toeJoint);
+    glPopMatrix();
+    
+    // === ENHANCED TOE TIP/NAIL === - Better positioned and shaped
+    glPushMatrix();
+    glColor3fv(skinPink);
+    glTranslatef(0.0f, width * 0.2f, length * 0.9f);  
+    GLUquadric* toeTip = gluNewQuadric();
+    gluQuadricNormals(toeTip, GLU_SMOOTH);
+    gluSphere(toeTip, width * 0.35f, 8, 8);
+    gluDeleteQuadric(toeTip);
+    glPopMatrix();
+    
+    // === TOE KNUCKLE === - Adds realistic detail
+    glPushMatrix();
+    glColor3fv(furBase);
+    glTranslatef(0.0f, width * 0.4f, length * 0.3f);
+    GLUquadric* toeKnuckle = gluNewQuadric();
+    gluQuadricNormals(toeKnuckle, GLU_SMOOTH);
+    gluSphere(toeKnuckle, width * 0.6f, 8, 6);
+    gluDeleteQuadric(toeKnuckle);
+    glPopMatrix();
+    
+    glPopMatrix();
+}
+
+// Function to draw a simple rectangular upper body that connects tail and legs
+void drawUpperBody() {
+    // Use the same authentic monkey fur colors from the tail and legs
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights  
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows
+    GLfloat muscleHighlight[] = { 0.55f, 0.35f, 0.22f, 1.0f };  // Muscle definition
+    
+    glPushMatrix();
+    
+    // Position the upper body to connect with the legs at the top and tail at the back
+    glTranslatef(0.0f, 1.2f, 0.0f);  // Positioned above the legs
+    
+    // === MAIN TORSO (PROPORTIONAL) === - Better proportioned rectangular shape
+    glColor3fv(furBase);
+    glPushMatrix();
+    glScalef(1.1f, 1.2f, 0.7f);  // REDUCED: More proportional to legs
+    GLUquadric* torso = gluNewQuadric();
+    gluQuadricNormals(torso, GLU_SMOOTH);
+    gluSphere(torso, 0.8f, 20, 16);  // Using sphere but scaled to be rectangular
+    gluDeleteQuadric(torso);
+    glPopMatrix();
+    
+    // === ENHANCED BACK MUSCLES === - Spine and back definition  
+    glColor3fv(furDark);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, -0.45f);  // Slightly reduced back extension
+    glScalef(0.9f, 1.0f, 0.25f);  // Proportionally reduced back area
+    GLUquadric* back = gluNewQuadric();
+    gluQuadricNormals(back, GLU_SMOOTH);
+    gluSphere(back, 0.8f, 16, 12);
+    gluDeleteQuadric(back);
+    glPopMatrix();
+    
+    // === TAIL CONNECTION AREA === - Specific area where tail attaches
+    glColor3fv(furBase);
+    glPushMatrix();
+    // Position to match tail base at (0.0f, 1.1f, -0.8f) 
+    glTranslatef(0.0f, -0.1f, -0.8f);  // Connect at tail attachment point
+    GLUquadric* tailConnection = gluNewQuadric();
+    gluQuadricNormals(tailConnection, GLU_SMOOTH);
+    gluSphere(tailConnection, 0.25f, 20, 16);  // Connection point for tail
+    gluDeleteQuadric(tailConnection);
+    glPopMatrix();
+    
+    // === LOWER TORSO CONNECTION (PROPORTIONAL) === - Connects to the top of legs
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.8f, 0.0f);  // Lower part to connect with legs
+    glScalef(1.0f, 0.5f, 0.45f);  // Proportionally reduced lower torso
+    GLUquadric* lowerTorso = gluNewQuadric();
+    gluQuadricNormals(lowerTorso, GLU_SMOOTH);
+    gluSphere(lowerTorso, 0.8f, 16, 12);
+    gluDeleteQuadric(lowerTorso);
+    glPopMatrix();
+    
+    // === LEG CONNECTION POINTS (PROPORTIONAL) === - Seamless connection to legs
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(muscleHighlight);
+        glPushMatrix();
+        glTranslatef(side * 0.35f, -1.0f, 0.0f);  // Slightly closer hip connections
+        GLUquadric* hipConnection = gluNewQuadric();
+        gluQuadricNormals(hipConnection, GLU_SMOOTH);
+        gluSphere(hipConnection, 0.28f, 16, 12);  // Slightly smaller hip connections
+        gluDeleteQuadric(hipConnection);
+        glPopMatrix();
+    }
+    
+    // === NECK AREA (PROPORTIONAL) === - Simple neck connection point for potential head
+    glColor3fv(furLight);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.9f, 0.0f);  // Slightly lower position
+    GLUquadric* neck = gluNewQuadric();
+    gluQuadricNormals(neck, GLU_SMOOTH);
+    gluSphere(neck, 0.18f, 12, 10);  // Slightly smaller neck
+    gluDeleteQuadric(neck);
+    glPopMatrix();
+    
+    // === ENHANCED SPINAL CONNECTION === - Better connection to tail
+    glColor3fv(furDark);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.4f, -0.55f);  // Adjusted spinal area leading to tail
+    glScalef(0.12f, 0.7f, 0.35f);  // Proportionally adjusted spine ridge
+    GLUquadric* spine = gluNewQuadric();
+    gluQuadricNormals(spine, GLU_SMOOTH);
+    gluSphere(spine, 0.8f, 12, 10);
+    gluDeleteQuadric(spine);
+    glPopMatrix();
+    
+    // === SIDE MUSCLES (PROPORTIONAL) === - Enhanced side muscle definition
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(muscleHighlight);
+        glPushMatrix();
+        glTranslatef(side * 0.6f, 0.0f, 0.08f);  // Adjusted side muscle placement
+        glScalef(0.22f, 0.85f, 0.35f);  // Proportionally reduced side muscles
+        GLUquadric* sideMuscle = gluNewQuadric();
+        gluQuadricNormals(sideMuscle, GLU_SMOOTH);
+        gluSphere(sideMuscle, 0.8f, 14, 12);
+        gluDeleteQuadric(sideMuscle);
+        glPopMatrix();
+    }
+    
+    glPopMatrix();
+}
+
+// Function to draw a detailed muscular upper torso above the middle body
+void drawMuscularUpperTorso() {
+    // Enhanced authentic colors for gym-fit physique with six-pack focus
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights  
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows
+    GLfloat muscleHighlight[] = { 0.55f, 0.35f, 0.22f, 1.0f };  // Muscle definition
+    GLfloat muscleDefinition[] = { 0.35f, 0.22f, 0.12f, 1.0f }; // Deep muscle definition
+    GLfloat jointColor[] = { 0.40f, 0.25f, 0.15f, 1.0f };      // Joint definition
+    GLfloat veins[] = { 0.25f, 0.15f, 0.08f, 1.0f };           // Vascular definition
+    GLfloat abColor[] = { 0.60f, 0.40f, 0.25f, 1.0f };         // Enhanced ab color
+    
+    // Enhanced breathing motion for realistic muscle movement
+    float breathingMotion = sinf(animationTime * 0.3f) * 0.08f;
+    float musclePump = sinf(animationTime * 0.2f) * 0.05f + 0.95f; // Muscle pump cycle
+    
+    glPushMatrix();
+    
+    // Position the upper torso above the current middle body
+    glTranslatef(0.0f, 2.8f, 0.0f);  // Positioned well above the middle body
+    
+    // === MAIN UPPER TORSO === - Athletic proportions without being oversized
+    glColor3fv(furBase);
+    glPushMatrix();
+    glScalef(1.3f * musclePump, 1.9f + breathingMotion, 0.8f);  // REDUCED: More proportional athletic build
+    GLUquadric* upperTorso = gluNewQuadric();
+    gluQuadricNormals(upperTorso, GLU_SMOOTH);
+    gluSphere(upperTorso, 0.8f, 28, 24);  // Ultra-high resolution for detail
+    gluDeleteQuadric(upperTorso);
+    glPopMatrix();
+    
+    // === ENHANCED SIX-PACK ABDOMINAL MUSCLES === - Gym-fit definition
+    // Main six-pack structure (3 rows × 2 columns = 6 pack)
+    for (int row = 0; row < 3; row++) {        
+        for (int col = -1; col <= 1; col += 2) {
+            glColor3fv(abColor);
+            glPushMatrix();
+            glTranslatef(col * 0.16f, 0.4f - row * 0.22f, 0.42f);  // Slightly adjusted positioning
+            glScalef(0.13f + breathingMotion * 0.15f, 0.13f + breathingMotion * 0.08f, 0.11f);  // Proportionally reduced
+            GLUquadric* ab = gluNewQuadric();
+            gluQuadricNormals(ab, GLU_SMOOTH);
+            gluSphere(ab, 0.9f, 20, 18);
+            gluDeleteQuadric(ab);
+            glPopMatrix();
+        }
+    }
+    
+    // Enhanced abdominal definition with deeper cuts
+    for (int i = 0; i < 3; i++) {
+        // Vertical separation (linea alba) - deeper and more prominent
+        glColor3fv(veins);
+        glPushMatrix();
+        glTranslatef(0.0f, 0.35f - i * 0.22f, 0.41f);  // Adjusted positioning
+        glScalef(0.025f, 0.18f, 0.07f);  // Proportionally adjusted
+        GLUquadric* abSep = gluNewQuadric();
+        gluQuadricNormals(abSep, GLU_SMOOTH);
+        gluSphere(abSep, 0.9f, 14, 12);
+        gluDeleteQuadric(abSep);
+        glPopMatrix();
+        
+        // Horizontal separations between rows
+        if (i < 2) {
+            glPushMatrix();
+            glTranslatef(0.0f, 0.23f - i * 0.22f, 0.41f);  // Adjusted positioning
+            glScalef(0.3f, 0.02f, 0.07f);  // Proportionally adjusted
+            GLUquadric* abHorizSep = gluNewQuadric();
+            gluQuadricNormals(abHorizSep, GLU_SMOOTH);
+            gluSphere(abHorizSep, 0.9f, 14, 12);
+            gluDeleteQuadric(abHorizSep);
+            glPopMatrix();
+        }
+    }
+    
+    // Additional ab muscle detail for each individual ab
+    for (int row = 0; row < 3; row++) {        
+        for (int col = -1; col <= 1; col += 2) {
+            // Individual ab muscle fibers
+            glColor3fv(muscleDefinition);
+            for (int fiber = 0; fiber < 3; fiber++) {
+                glPushMatrix();
+                glTranslatef(col * (0.14f + fiber * 0.008f), 0.38f - row * 0.22f + fiber * 0.015f, 0.43f);  // Adjusted
+                glScalef(0.035f, 0.035f, 0.018f);  // Proportionally reduced
+                GLUquadric* abFiber = gluNewQuadric();
+                gluQuadricNormals(abFiber, GLU_SMOOTH);
+                gluSphere(abFiber, 0.8f, 12, 10);
+                gluDeleteQuadric(abFiber);
+                glPopMatrix();
+            }
+        }
+    }
+    
+    // === OBLIQUE MUSCLES === - Side ab definition
+    for (int side = -1; side <= 1; side += 2) {
+        for (int i = 0; i < 4; i++) {
+            glColor3fv(muscleHighlight);
+            glPushMatrix();
+            glTranslatef(side * (0.35f + i * 0.04f), 0.25f - i * 0.13f, 0.35f);  // Proportionally adjusted
+            glScalef(0.07f, 0.08f, 0.07f);  // Proportionally reduced
+            GLUquadric* oblique = gluNewQuadric();
+            gluQuadricNormals(oblique, GLU_SMOOTH);
+            gluSphere(oblique, 0.9f, 16, 14);
+            gluDeleteQuadric(oblique);
+            glPopMatrix();
+        }
+    }
+    
+    // === PROPORTIONAL DELTOID MUSCLES === - Well-developed but not oversized
+    for (int side = -1; side <= 1; side += 2) {
+        // Main deltoid mass
+        glColor3fv(muscleHighlight);
+        glPushMatrix();
+        glTranslatef(side * 0.85f, 0.5f, 0.0f);  // Slightly closer
+        GLUquadric* mainDeltoid = gluNewQuadric();
+        gluQuadricNormals(mainDeltoid, GLU_SMOOTH);
+        gluSphere(mainDeltoid, 0.42f * musclePump, 24, 20);  // REDUCED: More proportional deltoids
+        gluDeleteQuadric(mainDeltoid);
+        glPopMatrix();
+        
+        // Three deltoid heads with good definition
+        for (int i = 0; i < 3; i++) {
+            float deltaAngle = (i - 1) * 1.0f; // Front, middle, back deltoid
+            
+            // Varying colors and sizes for each deltoid head
+            if (i == 0) {
+                glColor3fv(furLight);          // Anterior (front) - largest
+            } else if (i == 1) {
+                glColor3fv(muscleHighlight);   // Medial (middle) - peaked
+            } else {
+                glColor3fv(muscleDefinition);  // Posterior (back) - deep
+            }
+            
+            glPushMatrix();
+            glTranslatef(side * 0.72f, 0.42f + i * 0.07f, sinf(deltaAngle) * 0.22f);  // Proportionally adjusted
+            glScalef(0.22f + i * 0.04f, 0.3f + i * 0.08f, 0.26f + i * 0.04f);  // Proportionally reduced
+            GLUquadric* deltoidPart = gluNewQuadric();
+            gluQuadricNormals(deltoidPart, GLU_SMOOTH);
+            gluSphere(deltoidPart, 0.9f, 20, 16);
+            gluDeleteQuadric(deltoidPart);
+            glPopMatrix();
+        }
+        
+        // Deltoid striations (muscle fibers)
+        for (int j = 0; j < 4; j++) {
+            glColor3fv(veins);
+            glPushMatrix();
+            glTranslatef(side * (0.76f + j * 0.018f), 0.35f + j * 0.08f, j * 0.04f);  // Proportionally adjusted
+            glScalef(0.07f, 0.17f, 0.08f);  // Proportionally reduced
+            GLUquadric* deltoidStriation = gluNewQuadric();
+            gluQuadricNormals(deltoidStriation, GLU_SMOOTH);
+            gluSphere(deltoidStriation, 0.8f, 16, 12);
+            gluDeleteQuadric(deltoidStriation);
+            glPopMatrix();
+        }
+    }
+    
+    // === PROPORTIONAL LATISSIMUS DORSI === - V-taper but not extreme
+    for (int side = -1; side <= 1; side += 2) {
+        // Main lat muscle (creates the V-shape)
+        glColor3fv(furDark);
+        glPushMatrix();
+        glTranslatef(side * 0.6f, -0.08f, -0.3f);  // Proportionally adjusted
+        glScalef(0.38f * musclePump, 1.0f, 0.35f);  // REDUCED: More proportional V-taper
+        glRotatef(side * 22, 0, 0, 1); // Moderate V-angle
+        GLUquadric* mainLat = gluNewQuadric();
+        gluQuadricNormals(mainLat, GLU_SMOOTH);
+        gluSphere(mainLat, 0.8f, 22, 18);
+        gluDeleteQuadric(mainLat);
+        glPopMatrix();
+        
+        // Lat muscle fibers (creates the wing effect)
+        for (int i = 0; i < 3; i++) {
+            glColor3fv(i == 0 ? veins : (i == 1 ? muscleDefinition : muscleHighlight));
+            glPushMatrix();
+            glTranslatef(side * (0.5f + i * 0.1f), -0.17f + i * 0.12f, -0.26f);  // Proportionally adjusted
+            glScalef(0.15f + i * 0.04f, 0.42f + i * 0.17f, 0.17f);  // Proportionally reduced
+            GLUquadric* latFiber = gluNewQuadric();
+            gluQuadricNormals(latFiber, GLU_SMOOTH);
+            gluSphere(latFiber, 0.8f, 18, 14);
+            gluDeleteQuadric(latFiber);
+            glPopMatrix();
+        }
+        
+        // Lower lat insertions
+        glColor3fv(muscleDefinition);
+        glPushMatrix();
+        glTranslatef(side * 0.42f, -0.5f, -0.22f);  // Proportionally adjusted
+        glScalef(0.22f, 0.26f, 0.13f);  // Proportionally reduced
+        GLUquadric* latInsertion = gluNewQuadric();
+        gluQuadricNormals(latInsertion, GLU_SMOOTH);
+        gluSphere(latInsertion, 0.8f, 16, 12);
+        gluDeleteQuadric(latInsertion);
+        glPopMatrix();
+    }
+    
+    // === PROPORTIONAL TRAPEZIUS MUSCLES === - Well-developed traps
+    glColor3fv(muscleHighlight);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.75f, -0.26f);  // Proportionally adjusted
+    glScalef(1.0f * musclePump, 0.5f + breathingMotion, 0.35f);  // REDUCED: More proportional traps
+    GLUquadric* mainTrap = gluNewQuadric();
+    gluQuadricNormals(mainTrap, GLU_SMOOTH);
+    gluSphere(mainTrap, 0.8f, 22, 18);
+    gluDeleteQuadric(mainTrap);
+    glPopMatrix();
+    
+    // Upper trap peaks (controlled size)
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(furLight);
+        glPushMatrix();
+        glTranslatef(side * 0.26f, 0.9f, -0.22f);  // Proportionally adjusted
+        glScalef(0.17f, 0.33f + breathingMotion * 0.15f, 0.13f);  // Proportionally reduced
+        GLUquadric* trapPeak = gluNewQuadric();
+        gluQuadricNormals(trapPeak, GLU_SMOOTH);
+        gluSphere(trapPeak, 0.8f, 16, 14);
+        gluDeleteQuadric(trapPeak);
+        glPopMatrix();
+        
+        // Middle trap fibers
+        for (int i = 0; i < 3; i++) {
+            glColor3fv(i % 2 == 0 ? muscleDefinition : muscleHighlight);
+            glPushMatrix();
+            glTranslatef(side * (0.22f + i * 0.07f), 0.72f + i * 0.04f, -0.19f);  // Proportionally adjusted
+            glScalef(0.07f, 0.13f, 0.07f);  // Proportionally reduced
+            GLUquadric* trapFiber = gluNewQuadric();
+            gluQuadricNormals(trapFiber, GLU_SMOOTH);
+            gluSphere(trapFiber, 0.8f, 14, 12);
+            gluDeleteQuadric(trapFiber);
+            glPopMatrix();
+        }
+    }
+    
+    // === PROPORTIONAL CONNECTION TO MIDDLE BODY === - Seamless athletic transition
+    glColor3fv(furBase);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.3f, 0.0f);  // Adjusted connection point
+    glScalef(1.1f * musclePump, 0.65f, 0.65f);  // REDUCED: Proportional connection area
+    GLUquadric* connection = gluNewQuadric();
+    gluQuadricNormals(connection, GLU_SMOOTH);
+    gluSphere(connection, 0.8f, 20, 18);
+    gluDeleteQuadric(connection);
+    glPopMatrix();
+    
+    // Proportional connection bridge for seamless attachment
+    glColor3fv(jointColor);
+    glPushMatrix();
+    glTranslatef(0.0f, -1.0f, 0.0f);  // Adjusted positioning
+    glRotatef(-90, 1, 0, 0); // Vertical orientation
+    GLUquadric* bridge = gluNewQuadric();
+    gluQuadricNormals(bridge, GLU_SMOOTH);
+    gluCylinder(bridge, 0.28f * musclePump, 0.32f, 0.45f, 20, 3);  // REDUCED: Proportional bridge
+    
+    // Enhanced bridge caps
+    gluQuadricOrientation(bridge, GLU_INSIDE);
+    gluDisk(bridge, 0.0f, 0.28f * musclePump, 20, 1);
+    
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.45f);
+    GLUquadric* bridgeBottom = gluNewQuadric();
+    gluQuadricOrientation(bridgeBottom, GLU_OUTSIDE);
+    gluDisk(bridgeBottom, 0.0f, 0.32f, 20, 1);
+    glPopMatrix();
+    gluDeleteQuadric(bridge);
+    glPopMatrix();
+    
+    glPopMatrix();
+}
+
+// Function to draw the human-like head with fierce features
+void drawSimpleHead() {
+    // Use the SAME COLORS AS TAIL for consistency
+    GLfloat furBase[] = { 0.45f, 0.30f, 0.18f, 1.0f };         // Rich chestnut brown base - SAME AS TAIL
+    GLfloat furLight[] = { 0.65f, 0.45f, 0.28f, 1.0f };        // Golden brown highlights - SAME AS TAIL
+    GLfloat furDark[] = { 0.30f, 0.18f, 0.10f, 1.0f };         // Deep brown shadows - SAME AS TAIL
+    GLfloat furTip[] = { 0.25f, 0.15f, 0.08f, 1.0f };          // Very dark tip - SAME AS TAIL
+    GLfloat furUnderside[] = { 0.75f, 0.55f, 0.35f, 1.0f };    // Lighter underside - SAME AS TAIL
+    GLfloat skinPink[] = { 0.85f, 0.65f, 0.55f, 1.0f };        // Pink skin patches - SAME AS TAIL
+    GLfloat muscleRidge[] = { 0.35f, 0.22f, 0.12f, 1.0f };     // Muscle definition - SAME AS TAIL
+    GLfloat vertebraeColor[] = { 0.38f, 0.25f, 0.15f, 1.0f };  // Vertebrae bumps - SAME AS TAIL
+    
+    // Enhanced eye and mouth colors for visibility
+    GLfloat eyeWhite[] = { 0.95f, 0.95f, 0.95f, 1.0f };        // Bright eye whites
+    GLfloat eyeBlue[] = { 0.2f, 0.4f, 0.8f, 1.0f };            // Blue iris
+    GLfloat eyeBlack[] = { 0.05f, 0.05f, 0.05f, 1.0f };        // Black pupils
+    GLfloat mouthRed[] = { 0.8f, 0.3f, 0.2f, 1.0f };           // Bright red mouth interior
+    GLfloat lipColor[] = { 0.6f, 0.35f, 0.25f, 1.0f };         // Natural lip color
+    GLfloat teethWhite[] = { 0.95f, 0.95f, 0.90f, 1.0f };      // Teeth color
+
+    // Subtle head animation - breathing and slight movement
+    float headBob = sinf(animationTime * 0.4f) * 0.03f;
+    float headTilt = sinf(animationTime * 0.3f) * 1.5f;
+    float eyeBlink = fabs(sinf(animationTime * 0.8f)) > 0.95f ? 0.3f : 0.0f; // Blinking
+    
+    glPushMatrix();
+    
+    // Position the head above the muscular upper torso
+    glTranslatef(0.0f, 4.2f + headBob, 0.2f);
+    glRotatef(headTilt, 0, 0, 1);
+    
+    // === MAIN HEAD SHAPE (MONKEY-HUMAN HYBRID) ===
+    glColor3fv(furBase);  // Use tail color for base
+    glPushMatrix();
+    glScalef(0.9f, 1.1f, 0.85f);  // Human-like oval head proportions
+    GLUquadric* mainHead = gluNewQuadric();
+    gluQuadricNormals(mainHead, GLU_SMOOTH);
+    gluSphere(mainHead, 0.6f, 28, 28);
+    gluDeleteQuadric(mainHead);
+    glPopMatrix();
+    
+    // === HUMAN FACIAL STRUCTURE === - Central face area
+    glColor3fv(furLight);  // Use tail light color for central face
+    glPushMatrix();
+    glTranslatef(0.0f, -0.1f, 0.35f);
+    glScalef(0.75f, 0.8f, 0.4f);
+    GLUquadric* faceStructure = gluNewQuadric();
+    gluQuadricNormals(faceStructure, GLU_SMOOTH);
+    gluSphere(faceStructure, 0.6f, 24, 24);
+    gluDeleteQuadric(faceStructure);
+    glPopMatrix();
+    
+    // === ENHANCED HUMAN-LIKE EYES ===
+    for (int side = -1; side <= 1; side += 2) {
+        // Eye socket - deeper and more defined
+        glColor3fv(furDark);  // Use tail dark color
+        glPushMatrix();
+        glTranslatef(side * 0.22f, 0.18f, 0.42f);
+        glScalef(0.18f, 0.12f, 0.08f);
+        GLUquadric* eyeSocket = gluNewQuadric();
+        gluQuadricNormals(eyeSocket, GLU_SMOOTH);
+        gluSphere(eyeSocket, 1.0f, 20, 16);
+        gluDeleteQuadric(eyeSocket);
+        glPopMatrix();
+        
+        // Eye white - larger human-like almond shape
+        glColor3fv(eyeWhite);
+        glPushMatrix();
+        glTranslatef(side * 0.22f, 0.18f, 0.48f);
+        glScalef(0.16f, 0.09f - eyeBlink, 0.06f);  // Larger eyes with blinking
+        GLUquadric* eyeWhitePart = gluNewQuadric();
+        gluQuadricNormals(eyeWhitePart, GLU_SMOOTH);
+        gluSphere(eyeWhitePart, 1.0f, 20, 16);
+        gluDeleteQuadric(eyeWhitePart);
+        glPopMatrix();
+        
+        // Iris - blue colored human iris
+        glColor3fv(eyeBlue);
+        glPushMatrix();
+        glTranslatef(side * 0.22f, 0.18f, 0.52f);
+        GLUquadric* iris = gluNewQuadric();
+        gluQuadricNormals(iris, GLU_SMOOTH);
+        gluSphere(iris, 0.07f, 16, 16);  // Slightly larger iris
+        gluDeleteQuadric(iris);
+        glPopMatrix();
+        
+        // Pupil - with subtle tracking movement
+        float eyeMove = sinf(animationTime * 0.15f + side) * 0.008f;
+        glColor3fv(eyeBlack);
+        glPushMatrix();
+        glTranslatef(side * 0.22f + eyeMove, 0.18f, 0.54f);
+        GLUquadric* pupil = gluNewQuadric();
+        gluQuadricNormals(pupil, GLU_SMOOTH);
+        gluSphere(pupil, 0.03f, 16, 16);
+        gluDeleteQuadric(pupil);
+        glPopMatrix();
+        
+        // Eye highlights for realism
+        glColor3fv(eyeWhite);
+        glPushMatrix();
+        glTranslatef(side * 0.21f, 0.19f, 0.55f);
+        GLUquadric* eyeHighlight = gluNewQuadric();
+        gluQuadricNormals(eyeHighlight, GLU_SMOOTH);
+        gluSphere(eyeHighlight, 0.015f, 12, 10);
+        gluDeleteQuadric(eyeHighlight);
+        glPopMatrix();
+        
+        // Upper eyelid
+        glColor3fv(furBase);  // Use tail base color
+        glPushMatrix();
+        glTranslatef(side * 0.22f, 0.22f, 0.47f);
+        glScalef(0.16f, 0.04f, 0.08f);
+        GLUquadric* upperEyelid = gluNewQuadric();
+        gluQuadricNormals(upperEyelid, GLU_SMOOTH);
+        gluSphere(upperEyelid, 1.0f, 16, 12);
+        gluDeleteQuadric(upperEyelid);
+        glPopMatrix();
+        
+        // Lower eyelid
+        glPushMatrix();
+        glTranslatef(side * 0.22f, 0.14f, 0.47f);
+        glScalef(0.16f, 0.03f, 0.08f);
+        GLUquadric* lowerEyelid = gluNewQuadric();
+        gluQuadricNormals(lowerEyelid, GLU_SMOOTH);
+        gluSphere(lowerEyelid, 1.0f, 16, 12);
+        gluDeleteQuadric(lowerEyelid);
+        glPopMatrix();
+    }
+    
+    // === FIERCE EYEBROWS ===
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(furTip);  // Use tail tip color for dark eyebrows
+        
+        // Main eyebrow ridge - angled for fierce look
+        glPushMatrix();
+        glTranslatef(side * 0.22f, 0.28f, 0.45f);
+        glRotatef(side * -15.0f, 0, 0, 1);  // Angled for fierce expression
+        glScalef(0.2f, 0.06f, 0.08f);  // Thicker eyebrows
+        GLUquadric* eyebrow = gluNewQuadric();
+        gluQuadricNormals(eyebrow, GLU_SMOOTH);
+        gluSphere(eyebrow, 1.0f, 16, 12);
+        gluDeleteQuadric(eyebrow);
+        glPopMatrix();
+    }
+    
+    // === HUMAN-LIKE NOSE ===
+    glColor3fv(furUnderside);  // Use tail underside color for nose
+    glPushMatrix();
+    glTranslatef(0.0f, 0.05f, 0.52f);
+    
+    // Nose bridge
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, -0.02f);
+    glScalef(0.06f, 0.15f, 0.08f);
+    GLUquadric* noseBridge = gluNewQuadric();
+    gluQuadricNormals(noseBridge, GLU_SMOOTH);
+    gluSphere(noseBridge, 1.0f, 16, 16);
+    gluDeleteQuadric(noseBridge);
+    glPopMatrix();
+    
+    // Nose tip
+    glPushMatrix();
+    glScalef(0.08f, 0.06f, 0.1f);
+    GLUquadric* noseTip = gluNewQuadric();
+    gluQuadricNormals(noseTip, GLU_SMOOTH);
+    gluSphere(noseTip, 1.0f, 16, 16);
+    gluDeleteQuadric(noseTip);
+    glPopMatrix();
+    
+    // Nostrils - human-like shape
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(furDark);  // Use tail dark color for nostril holes
+        glPushMatrix();
+        glTranslatef(side * 0.025f, -0.015f, 0.04f);
+        glScalef(0.02f, 0.015f, 0.03f);
+        GLUquadric* nostril = gluNewQuadric();
+        gluQuadricNormals(nostril, GLU_SMOOTH);
+        gluSphere(nostril, 1.0f, 12, 10);
+        gluDeleteQuadric(nostril);
+        glPopMatrix();
+    }
+    glPopMatrix();
+    
+    // === ENHANCED VISIBLE MOUTH ===
+    glPushMatrix();
+    glTranslatef(0.0f, -0.15f, 0.48f);
+    
+    // MOUTH OPENING - VERY VISIBLE interior
+    glColor3fv(mouthRed);  // Bright red interior for visibility
+    glPushMatrix();
+    glTranslatef(0.0f, -0.01f, 0.02f);
+    glScalef(0.14f, 0.06f, 0.09f);  // Larger mouth opening for visibility
+    GLUquadric* mouthInterior = gluNewQuadric();
+    gluQuadricNormals(mouthInterior, GLU_SMOOTH);
+    gluSphere(mouthInterior, 1.0f, 16, 12);
+    gluDeleteQuadric(mouthInterior);
+    glPopMatrix();
+    
+    // Upper lip - clearly defined
+    glColor3fv(lipColor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.02f, 0.01f);
+    glScalef(0.16f, 0.03f, 0.05f);  // Wider and more visible
+    GLUquadric* upperLip = gluNewQuadric();
+    gluQuadricNormals(upperLip, GLU_SMOOTH);
+    gluSphere(upperLip, 1.0f, 16, 12);
+    gluDeleteQuadric(upperLip);
+    glPopMatrix();
+    
+    // Lower lip - fuller for human appearance
+    glPushMatrix();
+    glTranslatef(0.0f, -0.03f, 0.005f);
+    glScalef(0.18f, 0.04f, 0.04f);  // Wider and more visible
+    GLUquadric* lowerLip = gluNewQuadric();
+    gluQuadricNormals(lowerLip, GLU_SMOOTH);
+    gluSphere(lowerLip, 1.0f, 16, 12);
+    gluDeleteQuadric(lowerLip);
+    glPopMatrix();
+    
+    // VISIBLE TEETH for better mouth definition
+    glColor3fv(teethWhite);
+    for (int i = 0; i < 6; i++) {
+        float x = (i - 2.5f) * 0.04f;
+        glPushMatrix();
+        glTranslatef(x, 0.01f, 0.04f);
+        glScalef(0.02f, 0.03f, 0.025f);
+        GLUquadric* tooth = gluNewQuadric();
+        gluQuadricNormals(tooth, GLU_SMOOTH);
+        gluSphere(tooth, 1.0f, 12, 10);
+        gluDeleteQuadric(tooth);
+        glPopMatrix();
+    }
+    
+    // Lip line separation - more prominent
+    glColor3fv(furDark);  // Use tail dark color
+    glPushMatrix();
+    glScalef(0.17f, 0.01f, 0.025f);  // Wider and more visible
+    GLUquadric* lipLine = gluNewQuadric();
+    gluQuadricNormals(lipLine, GLU_SMOOTH);
+    gluSphere(lipLine, 1.0f, 16, 10);
+    gluDeleteQuadric(lipLine);
+    glPopMatrix();
+    
+    // Mouth corners - well defined
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(furBase);  // Use tail base color
+        glPushMatrix();
+        glTranslatef(side * 0.15f, -0.005f, 0.01f);  // Wider positioning
+        glScalef(0.03f, 0.025f, 0.03f);
+        GLUquadric* mouthCorner = gluNewQuadric();
+        gluQuadricNormals(mouthCorner, GLU_SMOOTH);
+        gluSphere(mouthCorner, 1.0f, 12, 10);
+        gluDeleteQuadric(mouthCorner);
+        glPopMatrix();
+    }
+    glPopMatrix();
+    
+    // === HUMAN-LIKE EARS (ONLY ONE PAIR) ===
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(furBase);  // Use tail base color
+        glPushMatrix();
+        glTranslatef(side * 0.52f, 0.0f, 0.15f);
+        glRotatef(side * 25, 0, 0, 1);  // Human-like ear angle
+        
+        // Outer ear (helix) - human proportions
+        glScalef(0.08f, 0.15f, 0.12f);  // Human-like ear size
+        GLUquadric* outerEar = gluNewQuadric();
+        gluQuadricNormals(outerEar, GLU_SMOOTH);
+        gluSphere(outerEar, 1.0f, 16, 14);
+        gluDeleteQuadric(outerEar);
+        
+        // Inner ear (concha) - human structure
+        glColor3fv(furDark);  // Use tail dark color
+        glScalef(0.6f, 0.7f, 0.4f);
+        GLUquadric* innerEar = gluNewQuadric();
+        gluQuadricNormals(innerEar, GLU_SMOOTH);
+        gluSphere(innerEar, 1.0f, 12, 10);
+        gluDeleteQuadric(innerEar);
+        
+        // Earlobe - human characteristic
+        glColor3fv(furLight);  // Use tail light color
+        glPushMatrix();
+        glTranslatef(0.0f, -0.8f, 0.0f);
+        glScalef(0.8f, 0.5f, 0.8f);
+        GLUquadric* earlobe = gluNewQuadric();
+        gluQuadricNormals(earlobe, GLU_SMOOTH);
+        gluSphere(earlobe, 1.0f, 12, 10);
+        gluDeleteQuadric(earlobe);
+        glPopMatrix();
+        glPopMatrix();
+    }
+    
+    // === STRONG JAWLINE ===
+    glColor3fv(furBase);  // Use tail base color
+    glPushMatrix();
+    glTranslatef(0.0f, -0.25f, 0.25f);
+    glScalef(0.4f, 0.15f, 0.25f);
+    GLUquadric* jawline = gluNewQuadric();
+    gluQuadricNormals(jawline, GLU_SMOOTH);
+    gluSphere(jawline, 1.0f, 20, 16);
+    gluDeleteQuadric(jawline);
+    glPopMatrix();
+    
+    // Jaw muscles
+    for (int side = -1; side <= 1; side += 2) {
+        glColor3fv(furLight);  // Use tail light color
+        glPushMatrix();
+        glTranslatef(side * 0.28f, -0.2f, 0.28f);
+        glScalef(0.08f, 0.12f, 0.1f);
+        GLUquadric* jawMuscle = gluNewQuadric();
+        gluQuadricNormals(jawMuscle, GLU_SMOOTH);
+        gluSphere(jawMuscle, 1.0f, 16, 12);
+        gluDeleteQuadric(jawMuscle);
+        glPopMatrix();
+    }
+    
+    // === HAIR AND FUR BLEND ===
+    glColor3fv(furTip);  // Use tail tip color for hair
+    glPushMatrix();
+    glTranslatef(0.0f, 0.25f, -0.1f);
+    glScalef(0.8f, 0.6f, 0.7f);
+    GLUquadric* hair = gluNewQuadric();
+    gluQuadricNormals(hair, GLU_SMOOTH);
+    gluSphere(hair, 0.65f, 24, 20);
+    gluDeleteQuadric(hair);
+    glPopMatrix();
+    
+    // === SEAMLESS NECK CONNECTION ===
+    glColor3fv(furBase);  // Use tail base color
+    glPushMatrix();
+    glTranslatef(0.0f, -0.5f, 0.0f);
+    GLUquadric* neckConnector = gluNewQuadric();
+    gluQuadricNormals(neckConnector, GLU_SMOOTH);
+    gluCylinder(neckConnector, 0.25f, 0.18f, 0.4f, 24, 3);
+    
+    // Add neck caps for seamless connection
+    GLUquadric* neckTop = gluNewQuadric();
+    gluQuadricOrientation(neckTop, GLU_INSIDE);
+    gluDisk(neckTop, 0.0f, 0.25f, 24, 1);
+    gluDeleteQuadric(neckTop);
+    
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.4f);
+    GLUquadric* neckBottom = gluNewQuadric();
+    gluQuadricOrientation(neckBottom, GLU_OUTSIDE);
+    gluDisk(neckBottom, 0.0f, 0.18f, 24, 1);
+    gluDeleteQuadric(neckBottom);
+    glPopMatrix();
+    gluDeleteQuadric(neckConnector);
+    glPopMatrix();
+    
+    // === FACIAL EXPRESSION LINES ===
+    glColor3fv(furDark);  // Use tail dark color
+    
+    // Frown lines between eyebrows
+    for (int i = 0; i < 3; i++) {
+        glPushMatrix();
+        glTranslatef((i - 1.0f) * 0.03f, 0.25f, 0.47f);
+        glRotatef(15.0f * (i - 1), 0, 0, 1);
+        glScalef(0.02f, 0.1f, 0.025f);
+        GLUquadric* frownLine = gluNewQuadric();
+        gluQuadricNormals(frownLine, GLU_SMOOTH);
+        gluSphere(frownLine, 1.0f, 12, 10);
+        gluDeleteQuadric(frownLine);
+        glPopMatrix();
+    }
+    
+    // Nasolabial folds for character depth
+    for (int side = -1; side <= 1; side += 2) {
+        glPushMatrix();
+        glTranslatef(side * 0.15f, -0.05f, 0.45f);
+        glRotatef(side * 25.0f, 0, 0, 1);
+        glScalef(0.012f, 0.14f, 0.035f);
+        GLUquadric* nasolabial = gluNewQuadric();
+        gluQuadricNormals(nasolabial, GLU_SMOOTH);
+        gluSphere(nasolabial, 1.0f, 12, 10);
+        gluDeleteQuadric(nasolabial);
+        glPopMatrix();
+    }
+    
+    glPopMatrix();
+}

@@ -1,0 +1,236 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <cmath> // Required for sin and cos in stitching
+
+#pragma comment (lib, "OpenGL32.lib")
+
+#define WINDOW_TITLE "OpenGL Western Boot"
+
+// Forward declaration of the display function
+void display();
+
+// Standard Windows procedure
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+
+	case WM_KEYDOWN:
+		if (wParam == VK_ESCAPE) PostQuitMessage(0);
+		break;
+
+	default:
+		return DefWindowProc(hWnd, msg, wParam, lParam);
+	}
+	return 0;
+}
+//--------------------------------------------------------------------
+
+bool initPixelFormat(HDC hdc)
+{
+	PIXELFORMATDESCRIPTOR pfd;
+	ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+	pfd.cAlphaBits = 8;
+	pfd.cColorBits = 32;
+	pfd.cDepthBits = 24;
+	pfd.cStencilBits = 0;
+	pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+	pfd.iLayerType = PFD_MAIN_PLANE;
+	pfd.iPixelType = PFD_TYPE_RGBA;
+	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pfd.nVersion = 1;
+
+	int n = ChoosePixelFormat(hdc, &pfd);
+	if (SetPixelFormat(hdc, n, &pfd))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+//--------------------------------------------------------------------
+// display() - The core function where the boot is drawn
+//--------------------------------------------------------------------
+void display()
+{
+	// Set a light grey background color
+	glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glLoadIdentity();
+
+	// Scale down the boot to fit nicely in the window
+	glScalef(0.5f, 0.5f, 0.5f);
+	// Move it slightly to center it
+	glTranslatef(0.0f, -0.2f, 0.0f);
+
+	// --- 1. Draw the Heel (Darkest part, drawn first) ---
+	// A dark brown for the heel block
+	glColor3f(0.36f, 0.2f, 0.09f);
+	glBegin(GL_POLYGON);
+	glVertex2f(-0.8f, -0.7f); // Bottom back
+	glVertex2f(-0.4f, -0.7f); // Bottom front
+	glVertex2f(-0.4f, -0.4f); // Top front
+	glVertex2f(-0.85f, -0.4f); // Top back (slight angle)
+	glEnd();
+
+	// --- 2. Draw the Sole ---
+	// Same dark brown as the heel
+	glBegin(GL_POLYGON);
+	glVertex2f(-0.4f, -0.65f); // Back part connecting to heel
+	glVertex2f(0.8f, -0.65f);  // Under the ball of the foot
+	glVertex2f(0.95f, -0.55f); // Start of the toe curve up
+	glVertex2f(1.0f, -0.4f);   // Tip of the toe
+	glVertex2f(0.9f, -0.3f);   // Top of the toe
+	glVertex2f(-0.4f, -0.3f);  // Line back to the vamp
+	glEnd();
+
+	// --- 3. Draw the Main Boot Body (Vamp and Shaft) ---
+	// A classic leather brown color
+	glColor3f(0.6f, 0.35f, 0.05f);
+	glBegin(GL_POLYGON);
+	// From top-back of the shaft down to the heel
+	glVertex2f(-0.7f, 1.0f);
+	glVertex2f(-0.85f, -0.4f);
+	// Across the top of the foot (the "vamp")
+	glVertex2f(-0.4f, -0.4f);
+	glVertex2f(-0.4f, -0.3f);
+	glVertex2f(0.9f, -0.3f);
+	// Up the front of the boot
+	glVertex2f(0.2f, 0.1f);
+	glVertex2f(0.1f, 0.5f);
+	glVertex2f(0.2f, 1.0f);
+	// The characteristic "scallop" or dip at the top opening
+	glVertex2f(0.1f, 0.85f);
+	glVertex2f(-0.2f, 0.8f);
+	glVertex2f(-0.5f, 0.85f);
+	glEnd();
+
+	// --- 4. Add Decorative Stitching ---
+	// A light tan/cream color for contrast
+	glColor3f(0.9f, 0.8f, 0.6f);
+	glLineWidth(2.0f); // Make stitches slightly thicker
+	glBegin(GL_LINE_STRIP);
+	// A simple, elegant curve on the shaft
+	glVertex2f(-0.4f, 0.5f);
+	glVertex2f(-0.2f, 0.6f);
+	glVertex2f(0.0f, 0.5f);
+	glEnd();
+	glBegin(GL_LINE_STRIP);
+	// Stitching along the vamp
+	glVertex2f(-0.35f, -0.2f);
+	glVertex2f(0.1f, -0.25f);
+	glVertex2f(0.6f, -0.2f);
+	glEnd();
+
+	// --- 5. Draw Black Outlines for Definition ---
+	// This makes the boot "pop" from the background
+	glColor3f(0.0f, 0.0f, 0.0f);
+	glLineWidth(3.0f); // Use a thicker line for the main outline
+
+	// Outline for the main boot body
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(-0.7f, 1.0f);
+	glVertex2f(-0.85f, -0.4f);
+	glVertex2f(-0.4f, -0.4f);
+	glVertex2f(-0.4f, -0.3f);
+	glVertex2f(0.9f, -0.3f);
+	glVertex2f(0.2f, 0.1f);
+	glVertex2f(0.1f, 0.5f);
+	glVertex2f(0.2f, 1.0f);
+	glVertex2f(0.1f, 0.85f);
+	glVertex2f(-0.2f, 0.8f);
+	glVertex2f(-0.5f, 0.85f);
+	glEnd();
+
+	// Outline for the sole (using a line strip to not close the shape against the boot)
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(-0.4f, -0.65f);
+	glVertex2f(0.8f, -0.65f);
+	glVertex2f(0.95f, -0.55f);
+	glVertex2f(1.0f, -0.4f);
+	glVertex2f(0.9f, -0.3f);
+	glEnd();
+
+	// Outline for the heel
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(-0.8f, -0.7f);
+	glVertex2f(-0.4f, -0.7f);
+	glVertex2f(-0.4f, -0.4f);
+	glVertex2f(-0.85f, -0.4f);
+	glEnd();
+
+	// Add a line to show the top opening more clearly
+	glBegin(GL_LINE_STRIP);
+	glVertex2f(-0.7f, 1.0f);
+	glVertex2f(-0.5f, 0.85f);
+	glVertex2f(-0.2f, 0.8f);
+	glVertex2f(0.1f, 0.85f);
+	glVertex2f(0.2f, 1.0f);
+	glEnd();
+}
+
+//--------------------------------------------------------------------
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+	WNDCLASSEX wc;
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.lpfnWndProc = WindowProcedure;
+	wc.lpszClassName = WINDOW_TITLE;
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+
+	if (!RegisterClassEx(&wc)) return false;
+
+	HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+		NULL, NULL, wc.hInstance, NULL);
+
+	//--------------------------------
+	//	Initialize window for OpenGL
+	//--------------------------------
+
+	HDC hdc = GetDC(hWnd);
+	initPixelFormat(hdc);
+	HGLRC hglrc = wglCreateContext(hdc);
+	if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+	//--------------------------------
+	//	End initialization
+	//--------------------------------
+
+	ShowWindow(hWnd, nCmdShow);
+
+	MSG msg;
+	ZeroMemory(&msg, sizeof(msg));
+
+	while (true)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) break;
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		display(); // Call the display function in the loop
+
+		SwapBuffers(hdc); // Swap buffers to show the rendered frame
+	}
+
+	UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+	return true;
+}

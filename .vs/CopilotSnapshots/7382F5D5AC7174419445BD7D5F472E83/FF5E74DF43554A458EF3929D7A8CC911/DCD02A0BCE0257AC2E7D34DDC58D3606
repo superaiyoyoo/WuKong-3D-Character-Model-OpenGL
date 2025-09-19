@@ -1,0 +1,297 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+
+#define WINDOW_TITLE "OpenGL Window"
+
+// Global variables for rotation and zoom
+float g_rotateX = 20.0f;
+float g_rotateY = 0.0f;
+float g_zoom = -2.5f;
+
+// Helper function to draw an ellipse (for toes, heel, etc.)
+void drawEllipse(float cx, float cy, float rx, float ry, int num_segments = 100) {
+    glBegin(GL_POLYGON);
+    for (int i = 0; i < num_segments; ++i) {
+        float theta = 2.0f * 3.1415926f * float(i) / float(num_segments);
+        float x = rx * cosf(theta);
+        float y = ry * sinf(theta);
+        glVertex2f(cx + x, cy + y);
+    }
+    glEnd();
+}
+
+// Helper function to draw a rounded rectangle (for bridge, arch, etc.)
+void drawRoundedRect(float x, float y, float w, float h, float r, int seg = 20) {
+    // Center rectangle
+    glBegin(GL_POLYGON);
+    glVertex2f(x + r, y);
+    glVertex2f(x + w - r, y);
+    glVertex2f(x + w, y + r);
+    glVertex2f(x + w, y + h - r);
+    glVertex2f(x + w - r, y + h);
+    glVertex2f(x + r, y + h);
+    glVertex2f(x, y + h - r);
+    glVertex2f(x, y + r);
+    glEnd();
+    // Four corners
+    for (int i = 0; i < 4; ++i) {
+        float cx = x + ((i == 1 || i == 2) ? w - r : r);
+        float cy = y + ((i >= 2) ? h - r : r);
+        float start = (i * 90.0f + 180.0f) * 3.1415926f / 180.0f;
+        float end = start + 3.1415926f / 2.0f;
+        glBegin(GL_POLYGON);
+        for (int j = 0; j <= seg; ++j) {
+            float theta = start + (end - start) * j / seg;
+            glVertex2f(cx + r * cosf(theta), cy + r * sinf(theta));
+        }
+        glEnd();
+    }
+}
+
+// Draw a single toenail
+void drawToenail(float cx, float cy, float rx, float ry) {
+    glColor3f(0.98f, 0.92f, 0.85f);
+    drawEllipse(cx, cy, rx, ry, 40);
+    glColor3f(0.85f, 0.7f, 0.6f);
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < 40; ++i) {
+        float theta = 2.0f * 3.1415926f * float(i) / 40.0f;
+        float x = rx * cosf(theta);
+        float y = ry * sinf(theta);
+        glVertex2f(cx + x, cy + y);
+    }
+    glEnd();
+}
+
+// Draw the sole of the foot from the bottom view
+void drawFootSole() {
+    // Main sole shape (approximate outline)
+    glColor3f(1.0f, 0.87f, 0.73f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-0.32f, -0.1f); // left heel
+    glVertex2f(-0.22f, -0.38f); // left arch
+    glVertex2f(-0.12f, -0.48f); // left ball
+    glVertex2f(-0.05f, -0.52f); // little toe base
+    glVertex2f(0.05f, -0.52f); // big toe base
+    glVertex2f(0.12f, -0.48f); // right ball
+    glVertex2f(0.22f, -0.38f); // right arch
+    glVertex2f(0.32f, -0.1f); // right heel
+    glVertex2f(0.25f, 0.18f); // right ankle
+    glVertex2f(0.0f, 0.28f); // achilles
+    glVertex2f(-0.25f, 0.18f); // left ankle
+    glEnd();
+
+    // Heel (calcaneus)
+    glColor3f(0.95f, 0.8f, 0.65f);
+    drawEllipse(0.0f, -0.08f, 0.18f, 0.10f, 60);
+
+    // Arch
+    glColor3f(0.98f, 0.9f, 0.8f);
+    drawEllipse(-0.13f, -0.28f, 0.08f, 0.04f, 40);
+    drawEllipse(0.13f, -0.28f, 0.08f, 0.04f, 40);
+
+    // Instep/bridge
+    glColor3f(0.97f, 0.85f, 0.7f);
+    drawRoundedRect(-0.09f, -0.12f, 0.18f, 0.22f, 0.04f);
+
+    // Achilles tendon
+    glColor3f(0.85f, 0.7f, 0.6f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-0.04f, 0.18f);
+    glVertex2f(0.04f, 0.18f);
+    glVertex2f(0.02f, 0.28f);
+    glVertex2f(-0.02f, 0.28f);
+    glEnd();
+
+    // Draw 5 toes (from left to right, little toe to big toe)
+    float toeCenters[5][2] = {
+        {-0.09f, -0.52f}, // little toe
+        {-0.045f, -0.56f},
+        {0.0f, -0.58f},
+        {0.045f, -0.56f},
+        {0.09f, -0.52f} // big toe
+    };
+    float toeRadii[5][2] = {
+        {0.025f, 0.035f},
+        {0.028f, 0.038f},
+        {0.03f, 0.04f},
+        {0.028f, 0.038f},
+        {0.035f, 0.045f}
+    };
+    for (int i = 0; i < 5; ++i) {
+        glColor3f(1.0f, 0.87f, 0.73f);
+        drawEllipse(toeCenters[i][0], toeCenters[i][1], toeRadii[i][0], toeRadii[i][1], 40);
+        // Toe nails
+        drawToenail(toeCenters[i][0], toeCenters[i][1] + toeRadii[i][1] * 0.3f, toeRadii[i][0] * 0.7f, toeRadii[i][1] * 0.35f);
+    }
+
+    // Toe creases
+    glColor3f(0.85f, 0.7f, 0.6f);
+    for (int i = 0; i < 5; ++i) {
+        glBegin(GL_LINE_STRIP);
+        for (int j = 0; j <= 20; ++j) {
+            float theta = 3.1415926f * float(j) / 20.0f;
+            float x = toeCenters[i][0] + toeRadii[i][0] * cosf(theta);
+            float y = toeCenters[i][1] + toeRadii[i][1] * sinf(theta) - 0.01f;
+            glVertex2f(x, y);
+        }
+        glEnd();
+    }
+
+    // Ball of foot
+    glColor3f(0.97f, 0.85f, 0.7f);
+    drawEllipse(0.0f, -0.44f, 0.13f, 0.07f, 50);
+
+    // Ankle bones
+    glColor3f(0.95f, 0.8f, 0.65f);
+    drawEllipse(-0.17f, 0.13f, 0.03f, 0.018f, 20);
+    drawEllipse(0.17f, 0.13f, 0.03f, 0.018f, 20);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            break;
+        case VK_LEFT:
+            g_rotateY -= 5.0f;
+            break;
+        case VK_RIGHT:
+            g_rotateY += 5.0f;
+            break;
+        case VK_UP:
+            g_zoom += 0.1f;
+            break;
+        case VK_DOWN:
+            g_zoom -= 0.1f;
+            break;
+        }
+        break;
+    default:
+        break;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+//--------------------------------------------------------------------
+
+bool initPixelFormat(HDC hdc)
+{
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+    pfd.cAlphaBits = 8;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+
+    pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+
+    // choose pixel format returns the number most similar pixel format available
+    int n = ChoosePixelFormat(hdc, &pfd);
+
+    // set pixel format returns whether it sucessfully set the pixel format
+    if (SetPixelFormat(hdc, n, &pfd))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void display()
+{
+    glClearColor(0.85f, 0.93f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-1, 1, -1, 1, 1, 10);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glTranslatef(0.0f, 0.0f, g_zoom);
+    glRotatef(g_rotateX, 1.0f, 0.0f, 0.0f);
+    glRotatef(g_rotateY, 0.0f, 1.0f, 0.0f);
+
+    drawFootSole();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        NULL, NULL, wc.hInstance, NULL);
+
+    //--------------------------------
+    //    Initialize window for OpenGL
+    //--------------------------------
+
+    HDC hdc = GetDC(hWnd);
+
+    //    initialize pixel format for the window
+    initPixelFormat(hdc);
+
+    //    get an openGL context
+    HGLRC hglrc = wglCreateContext(hdc);
+
+    //    make context current
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    //--------------------------------
+    //    End initialization
+    //--------------------------------
+
+    ShowWindow(hWnd, nCmdShow);
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        display();
+
+        SwapBuffers(hdc);
+    }
+
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return true;
+}
+//--------------------------------------------------------------------

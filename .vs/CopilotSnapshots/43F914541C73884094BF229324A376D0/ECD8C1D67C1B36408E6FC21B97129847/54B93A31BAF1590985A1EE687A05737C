@@ -1,0 +1,301 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Monkey Tail - Black Myth Wukong"
+#define PI 3.14159f
+
+// Global variables for camera control
+float rotationX = 10.0f;
+float rotationY = 0.0f;
+float zoom = -8.0f;
+
+// Animation variables for realistic tail movement
+float animationTime = 0.0f;
+
+// Forward declarations
+void drawMonkeyTail();
+void drawFurStrand(float length, float thickness, float curvature);
+void drawMuscleDefinition(float radius, float length, float t);
+
+// ...existing code...
+
+// Enhanced function to draw ultra-realistic monkey tail with anatomical accuracy
+void drawMonkeyTail() {
+    // Realistic monkey tail colors - based on actual macaque fur patterns
+    GLfloat furRoot[] = { 0.25f, 0.20f, 0.15f, 1.0f };         // Dark fur roots (black-brown)
+    GLfloat furMid[] = { 0.45f, 0.35f, 0.25f, 1.0f };          // Mid-fur brown
+    GLfloat furOuter[] = { 0.65f, 0.50f, 0.35f, 1.0f };        // Outer fur light brown
+    GLfloat furTip[] = { 0.80f, 0.65f, 0.45f, 1.0f };          // Fur tips (lightest)
+    GLfloat furUnder[] = { 0.70f, 0.55f, 0.40f, 1.0f };        // Underside lighter fur
+    GLfloat skinTone[] = { 0.85f, 0.70f, 0.60f, 1.0f };        // Visible skin patches
+    GLfloat muscleHighlight[] = { 0.35f, 0.28f, 0.20f, 1.0f }; // Muscle definition
+    
+    // Anatomically correct tail parameters
+    const int tailSegments = 25;  // More segments for smoother curve
+    const int vertebraeSegments = 20; // Simulate vertebrae
+    float tailLength = 5.2f;  // Realistic tail length (longer)
+    float segmentLength = tailLength / tailSegments;
+    
+    // Subtle animation for liveliness
+    animationTime += 0.02f;
+    float breathingMotion = sinf(animationTime * 0.5f) * 0.1f;
+    float naturalSway = sinf(animationTime * 0.3f) * 0.15f;
+    
+    glPushMatrix();
+    
+    // Position tail at anatomically correct location
+    glTranslatef(0.0f, 1.2f, -0.3f);  // Slightly higher start position
+    glRotatef(-5.0f, 1.0f, 0.0f, 0.0f); // Natural downward angle
+    
+    // Create realistic tail curve - starts thick, gradually tapers, natural S-curve
+    for (int i = 0; i < tailSegments; i++) {
+        float t = (float)i / (tailSegments - 1);  // 0 to 1 progression
+        
+        // Enhanced natural curve mathematics based on real monkey tail biomechanics
+        float gravity = t * t * 1.2f;  // Gravity effect increases along length
+        float curveY = -sinf(t * PI * 1.2f) * 1.5f - gravity + breathingMotion;
+        float curveX = sinf(t * PI * 0.6f + naturalSway) * 0.8f * (1.0f - t * 0.3f);
+        float curveZ = -cosf(t * PI * 0.9f) * 1.8f;
+        
+        // Realistic tapering - monkey tails taper gradually then sharply near tip
+        float baseRadius = 0.22f;  // Thicker base
+        float midRadius = 0.15f;   // Mid-section
+        float tipRadius = 0.03f;   // Very thin tip
+        
+        float currentRadius;
+        if (t < 0.3f) {
+            // Base section - gradual taper
+            currentRadius = baseRadius - (baseRadius - midRadius) * (t / 0.3f);
+        } else if (t < 0.8f) {
+            // Mid section - slow taper
+            currentRadius = midRadius - (midRadius - tipRadius * 2.0f) * ((t - 0.3f) / 0.5f);
+        } else {
+            // Tip section - rapid taper
+            currentRadius = tipRadius * 2.0f - (tipRadius * 1.5f) * ((t - 0.8f) / 0.2f);
+        }
+        
+        // Enhanced color variation for realistic fur appearance
+        float furDensity = 1.0f - t * 0.3f;  // Less fur density toward tip
+        float colorVariation = (sinf(t * PI * 3.0f) + 1.0f) * 0.5f;
+        float lightExposure = (curveY + 2.0f) / 4.0f;  // Simulate natural lighting
+        
+        // Select appropriate fur color based on position and lighting
+        GLfloat* currentColor;
+        if (t > 0.9f) {
+            currentColor = furRoot;  // Dark tip
+        } else if (lightExposure > 0.7f && colorVariation > 0.6f) {
+            currentColor = furTip;   // Highlighted areas
+        } else if (lightExposure > 0.5f) {
+            currentColor = furOuter; // Standard outer fur
+        } else if (lightExposure > 0.3f) {
+            currentColor = furMid;   // Mid-tone fur
+        } else {
+            currentColor = furRoot;  // Shadow areas
+        }
+        
+        glColor3fv(currentColor);
+        
+        glPushMatrix();
+        glTranslatef(curveX, curveY, curveZ);
+        
+        // Calculate proper orientation for each segment
+        if (i < tailSegments - 1) {
+            float nextT = (float)(i + 1) / (tailSegments - 1);
+            float nextGravity = nextT * nextT * 1.2f;
+            float nextY = -sinf(nextT * PI * 1.2f) * 1.5f - nextGravity + breathingMotion;
+            float nextX = sinf(nextT * PI * 0.6f + naturalSway) * 0.8f * (1.0f - nextT * 0.3f);
+            float nextZ = -cosf(nextT * PI * 0.9f) * 1.8f;
+            
+            float dirX = nextX - curveX;
+            float dirY = nextY - curveY;
+            float dirZ = nextZ - curveZ;
+            
+            // Smooth rotation for natural segment alignment
+            float angleY = atan2f(dirX, dirZ) * 180.0f / PI;
+            float angleX = -atan2f(dirY, sqrtf(dirX*dirX + dirZ*dirZ)) * 180.0f / PI;
+            
+            glRotatef(angleY, 0, 1, 0);
+            glRotatef(angleX, 1, 0, 0);
+        }
+        
+        // Draw main tail segment with proper tapering
+        GLUquadric* segment = gluNewQuadric();
+        gluQuadricOrientation(segment, GLU_OUTSIDE);
+        gluQuadricNormals(segment, GLU_SMOOTH);
+        gluQuadricTexture(segment, GL_TRUE);
+        
+        float nextRadius = (i < tailSegments - 1) ? currentRadius * 0.95f : currentRadius * 0.8f;
+        gluCylinder(segment, currentRadius, nextRadius, segmentLength, 20, 1);
+        gluDeleteQuadric(segment);
+        
+        // Add muscle definition for anatomical realism
+        if (t < 0.5f) {  // Only on thicker part of tail
+            drawMuscleDefinition(currentRadius, segmentLength, t);
+        }
+        
+        // Enhanced fur texture system
+        int furCount = (int)(furDensity * 16);  // Variable fur density
+        for (int j = 0; j < furCount; j++) {
+            float angle = j * 2.0f * PI / furCount;
+            float radiusVariation = 0.8f + (j % 3) * 0.1f;  // Slight radius variation
+            float furX = cosf(angle) * currentRadius * radiusVariation;
+            float furY = sinf(angle) * currentRadius * radiusVariation;
+            
+            // Multiple fur layers for depth
+            for (int layer = 0; layer < 3; layer++) {
+                float layerOffset = layer * segmentLength * 0.25f;
+                float layerIntensity = 1.0f - layer * 0.3f;
+                
+                // Vary fur color by layer (inner darker, outer lighter)
+                GLfloat layerColor[3];
+                if (layer == 0) {
+                    layerColor[0] = furRoot[0];
+                    layerColor[1] = furRoot[1]; 
+                    layerColor[2] = furRoot[2];
+                } else if (layer == 1) {
+                    layerColor[0] = furMid[0];
+                    layerColor[1] = furMid[1];
+                    layerColor[2] = furMid[2];
+                } else {
+                    layerColor[0] = furOuter[0];
+                    layerColor[1] = furOuter[1];
+                    layerColor[2] = furOuter[2];
+                }
+                
+                glColor3f(layerColor[0] * layerIntensity, 
+                         layerColor[1] * layerIntensity, 
+                         layerColor[2] * layerIntensity);
+                
+                glPushMatrix();
+                glTranslatef(furX, furY, layerOffset);
+                
+                // Draw individual fur strands with natural curvature
+                float furLength = currentRadius * (0.4f + layer * 0.2f);
+                float furThickness = currentRadius * (0.08f - layer * 0.02f);
+                float curvature = (j % 5) * 0.1f;  // Natural fur curl variation
+                
+                drawFurStrand(furLength, furThickness, curvature);
+                glPopMatrix();
+            }
+        }
+        
+        // Add underside lighter fur for realistic contrast
+        if (curveY < 0) {  // Bottom side of tail
+            glColor3fv(furUnder);
+            for (int j = 0; j < 6; j++) {
+                float angle = j * 2.0f * PI / 6.0f + PI;  // Bottom hemisphere
+                float furX = cosf(angle) * currentRadius * 0.7f;
+                float furY = sinf(angle) * currentRadius * 0.7f;
+                
+                glPushMatrix();
+                glTranslatef(furX, furY, 0);
+                GLUquadric* underFur = gluNewQuadric();
+                gluSphere(underFur, currentRadius * 0.12f, 8, 8);
+                gluDeleteQuadric(underFur);
+                glPopMatrix();
+            }
+        }
+        
+        glPopMatrix();
+        glTranslatef(curveX, curveY, curveZ);
+    }
+    
+    // Enhanced tail tip with realistic fur tuft
+    glPushMatrix();
+    float finalT = 1.0f;
+    float finalGravity = finalT * finalT * 1.2f;
+    float finalY = -sinf(finalT * PI * 1.2f) * 1.5f - finalGravity + breathingMotion;
+    float finalX = sinf(finalT * PI * 0.6f + naturalSway) * 0.8f * (1.0f - finalT * 0.3f);
+    float finalZ = -cosf(finalT * PI * 0.9f) * 1.8f;
+    glTranslatef(finalX, finalY, finalZ);
+    
+    // Main tail tip with skin tone
+    glColor3fv(skinTone);
+    GLUquadric* tailTipCore = gluNewQuadric();
+    gluSphere(tailTipCore, 0.05f, 16, 16);
+    gluDeleteQuadric(tailTipCore);
+    
+    // Realistic fur tuft at the very end - sparse and wispy
+    for (int i = 0; i < 8; i++) {
+        float angle = i * 2.0f * PI / 8.0f;
+        float tufX = cosf(angle) * 0.08f * (1.0f + sinf(animationTime + i) * 0.1f);
+        float tufY = sinf(angle) * 0.08f * (1.0f + cosf(animationTime + i) * 0.1f);
+        float tufZ = (i % 2) * 0.06f - 0.03f;
+        
+        // Alternate between dark roots and lighter tips
+        if (i % 2 == 0) {
+            glColor3fv(furRoot);
+        } else {
+            glColor3fv(furTip);
+        }
+        
+        glPushMatrix();
+        glTranslatef(tufX, tufY, tufZ);
+        drawFurStrand(0.15f, 0.01f, 0.3f);  // Long, thin, curved strands
+        glPopMatrix();
+    }
+    
+    glPopMatrix();
+    glPopMatrix();
+}
+
+// Helper function to draw individual fur strands with natural curvature
+void drawFurStrand(float length, float thickness, float curvature) {
+    const int strandSegments = 5;
+    
+    for (int i = 0; i < strandSegments; i++) {
+        float t = (float)i / strandSegments;
+        float nextT = (float)(i + 1) / strandSegments;
+        
+        // Apply curvature for natural fur bend
+        float bend = sinf(t * PI * curvature) * length * 0.2f;
+        float nextBend = sinf(nextT * PI * curvature) * length * 0.2f;
+        
+        glPushMatrix();
+        glTranslatef(bend, 0, t * length);
+        glRotatef(curvature * 30.0f * t, 0, 0, 1);
+        
+        float currentThickness = thickness * (1.0f - t * 0.5f);  // Taper strand
+        
+        GLUquadric* strand = gluNewQuadric();
+        gluQuadricNormals(strand, GLU_SMOOTH);
+        gluCylinder(strand, currentThickness, currentThickness * 0.8f, length / strandSegments, 6, 1);
+        gluDeleteQuadric(strand);
+        
+        glPopMatrix();
+    }
+}
+
+// Helper function to add muscle definition for anatomical realism
+void drawMuscleDefinition(float radius, float length, float t) {
+    // Add subtle muscle ridges that are more prominent at the base
+    float muscleStrength = (1.0f - t) * 0.3f;  // Stronger at base
+    
+    glColor3f(0.35f * (1.0f + muscleStrength), 
+              0.28f * (1.0f + muscleStrength), 
+              0.20f * (1.0f + muscleStrength));
+    
+    for (int i = 0; i < 4; i++) {
+        float angle = i * PI / 2.0f;
+        float muscleX = cosf(angle) * radius * (0.9f + muscleStrength);
+        float muscleY = sinf(angle) * radius * (0.9f + muscleStrength);
+        
+        glPushMatrix();
+        glTranslatef(muscleX, muscleY, 0);
+        glRotatef(angle * 180.0f / PI, 0, 0, 1);
+        glScalef(0.05f * muscleStrength, 0.02f * muscleStrength, length);
+        
+        GLUquadric* muscle = gluNewQuadric();
+        gluSphere(muscle, 1.0f, 8, 8);
+        gluDeleteQuadric(muscle);
+        
+        glPopMatrix();
+    }
+}
+
+// ...existing code continues...

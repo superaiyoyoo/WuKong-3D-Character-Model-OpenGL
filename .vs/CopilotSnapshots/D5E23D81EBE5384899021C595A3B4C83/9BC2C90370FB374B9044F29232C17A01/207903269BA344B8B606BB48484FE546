@@ -1,0 +1,487 @@
+﻿#include <Windows.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+#include <math.h>
+
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLU32.lib")
+
+#define WINDOW_TITLE "Armored Boot Design"
+#define PI 3.14159265359
+
+// Global variables for camera control
+float rotationX = 0.0f;
+float rotationY = 0.0f;
+float zoom = -6.0f;
+
+void drawArmoredBoot(bool isLeft) {
+    // Scale for right boot (mirror)
+    if (!isLeft) {
+        glScalef(-1.0f, 1.0f, 1.0f);
+    }
+
+    // Boot color scheme
+    GLfloat darkBrownSole[] = { 0.35f, 0.25f, 0.15f, 1.0f }; // Dark brown sole
+    GLfloat richBrownLeather[] = { 0.65f, 0.45f, 0.25f, 1.0f }; // Rich brown leather
+    GLfloat metallicArmor[] = { 0.7f, 0.8f, 0.9f, 1.0f }; // Metallic silver-blue
+    GLfloat bronzeBuckles[] = { 0.8f, 0.6f, 0.2f, 1.0f }; // Bronze buckles
+    GLfloat leatherStitching[] = { 0.8f, 0.6f, 0.4f, 1.0f }; // Leather stitching
+
+    // Draw boot sole with realistic tapered shape
+    glColor3fv(darkBrownSole);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.4f, 0.0f);
+    glScalef(1.0f, 0.3f, 2.8f);
+    glBegin(GL_QUADS);
+    // Bottom with tapered shape (wider at heel, narrower at toe)
+    glVertex3f(-0.6f, -0.5f, -0.5f);  // Heel wider
+    glVertex3f(0.6f, -0.5f, -0.5f);
+    glVertex3f(0.4f, -0.5f, 0.5f);   // Toe narrower
+    glVertex3f(-0.4f, -0.5f, 0.5f);
+    // Top
+    glVertex3f(-0.6f, 0.5f, -0.5f);
+    glVertex3f(0.6f, 0.5f, -0.5f);
+    glVertex3f(0.4f, 0.5f, 0.5f);
+    glVertex3f(-0.4f, 0.5f, 0.5f);
+    // Sides with proper tapering
+    glVertex3f(-0.6f, -0.5f, -0.5f);
+    glVertex3f(-0.4f, -0.5f, 0.5f);
+    glVertex3f(-0.4f, 0.5f, 0.5f);
+    glVertex3f(-0.6f, 0.5f, -0.5f);
+    
+    glVertex3f(0.6f, -0.5f, -0.5f);
+    glVertex3f(0.6f, 0.5f, -0.5f);
+    glVertex3f(0.4f, 0.5f, 0.5f);
+    glVertex3f(0.4f, -0.5f, 0.5f);
+    glEnd();
+    glPopMatrix();
+
+    // Draw western heel
+    glColor3fv(darkBrownSole);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.25f, -1.2f);
+    glScalef(0.8f, 0.6f, 0.5f);
+    GLUquadricObj* westernHeel = gluNewQuadric();
+    gluCylinder(westernHeel, 0.4, 0.4, 0.8, 12, 8);
+    gluDeleteQuadric(westernHeel);
+    glPopMatrix();
+
+    // Draw boot body (foot section)
+    glColor3fv(richBrownLeather);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    
+    // Steel toe reinforcement
+    glColor3fv(metallicArmor);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.8f);
+    glScalef(1.0f, 0.6f, 0.8f);
+    GLUquadricObj* steelToe = gluNewQuadric();
+    gluSphere(steelToe, 0.5, 16, 12);
+    gluDeleteQuadric(steelToe);
+    glPopMatrix();
+
+    // Main boot body (leather)
+    glColor3fv(richBrownLeather);
+    glPushMatrix();
+    glTranslatef(0.0f, 0.1f, -0.1f);
+    glScalef(0.9f, 1.0f, 2.0f);
+    glBegin(GL_QUADS);
+    // Left side
+    glVertex3f(-0.5f, -0.5f, -0.6f);
+    glVertex3f(-0.5f, 0.4f, -0.6f);
+    glVertex3f(-0.5f, 0.4f, 0.6f);
+    glVertex3f(-0.5f, -0.5f, 0.6f);
+    // Right side
+    glVertex3f(0.5f, -0.5f, -0.6f);
+    glVertex3f(0.5f, 0.4f, -0.6f);
+    glVertex3f(0.5f, 0.4f, 0.6f);
+    glVertex3f(0.5f, -0.5f, 0.6f);
+    // Back
+    glVertex3f(-0.5f, -0.5f, -0.6f);
+    glVertex3f(-0.5f, 0.4f, -0.6f);
+    glVertex3f(0.5f, 0.4f, -0.6f);
+    glVertex3f(0.5f, -0.5f, -0.6f);
+    glEnd();
+    glPopMatrix();
+
+    // Boot shaft extending to mid-calf
+    glColor3fv(richBrownLeather);
+    glPushMatrix();
+    glTranslatef(0.0f, 1.2f, -0.4f);
+    glScalef(1.0f, 2.0f, 1.5f);
+    glBegin(GL_QUADS);
+    // Front
+    glVertex3f(-0.4f, -0.5f, 0.3f);
+    glVertex3f(0.4f, -0.5f, 0.3f);
+    glVertex3f(0.4f, 0.5f, 0.3f);
+    glVertex3f(-0.4f, 0.5f, 0.3f);
+    // Back
+    glVertex3f(-0.4f, -0.5f, -0.3f);
+    glVertex3f(-0.4f, 0.5f, -0.3f);
+    glVertex3f(0.4f, 0.5f, -0.3f);
+    glVertex3f(0.4f, -0.5f, -0.3f);
+    // Left side
+    glVertex3f(-0.4f, -0.5f, -0.3f);
+    glVertex3f(-0.4f, -0.5f, 0.3f);
+    glVertex3f(-0.4f, 0.5f, 0.3f);
+    glVertex3f(-0.4f, 0.5f, -0.3f);
+    // Right side
+    glVertex3f(0.4f, -0.5f, -0.3f);
+    glVertex3f(0.4f, 0.5f, -0.3f);
+    glVertex3f(0.4f, 0.5f, 0.3f);
+    glVertex3f(0.4f, -0.5f, 0.3f);
+    glEnd();
+    glPopMatrix();
+
+    // Draw shin guard (main armor plate)
+    glColor3fv(metallicArmor);
+    glPushMatrix();
+    glTranslatef(0.0f, 1.0f, 0.2f);
+    glScalef(0.8f, 1.6f, 0.2f);
+    glBegin(GL_QUADS);
+    // Front face
+    glVertex3f(-0.4f, -0.5f, 0.5f);
+    glVertex3f(0.4f, -0.5f, 0.5f);
+    glVertex3f(0.4f, 0.5f, 0.5f);
+    glVertex3f(-0.4f, 0.5f, 0.5f);
+    glEnd();
+    glPopMatrix();
+
+    // Draw horizontal ridges on shin guard
+    glColor3f(0.6f, 0.7f, 0.8f);
+    glLineWidth(3.0f);
+    glPushMatrix();
+    glTranslatef(0.0f, 1.0f, 0.32f);
+    for (int i = -2; i <= 2; i++) {
+        glBegin(GL_LINES);
+        glVertex3f(-0.3f, i * 0.15f, 0.0f);
+        glVertex3f(0.3f, i * 0.15f, 0.0f);
+        glEnd();
+    }
+    glPopMatrix();
+    glLineWidth(1.0f);
+
+    // Draw knee cap armor
+    glColor3fv(metallicArmor);
+    glPushMatrix();
+    glTranslatef(0.0f, 1.8f, 0.1f);
+    glScalef(0.6f, 0.6f, 0.4f);
+    GLUquadricObj* kneeCap = gluNewQuadric();
+    gluSphere(kneeCap, 0.5, 12, 8);
+    gluDeleteQuadric(kneeCap);
+    glPopMatrix();
+
+    // Draw articulated side armor plates (3 per side)
+    glColor3fv(metallicArmor);
+    for (int side = -1; side <= 1; side += 2) {
+        for (int plate = 0; plate < 3; plate++) {
+            glPushMatrix();
+            glTranslatef(side * 0.45f, 0.6f + plate * 0.3f, 0.0f);
+            glScalef(0.15f, 0.25f, 0.8f);
+            glBegin(GL_QUADS);
+            // Outer face
+            glVertex3f(-0.5f, -0.5f, -0.5f);
+            glVertex3f(0.5f, -0.5f, -0.5f);
+            glVertex3f(0.5f, 0.5f, -0.5f);
+            glVertex3f(-0.5f, 0.5f, -0.5f);
+            glEnd();
+            glPopMatrix();
+        }
+    }
+
+    // Draw reinforced straps (4 straps)
+    glColor3fv(richBrownLeather);
+    for (int i = 0; i < 4; i++) {
+        glPushMatrix();
+        glTranslatef(0.0f, 0.3f + i * 0.3f, 0.15f);
+        glScalef(0.9f, 0.08f, 0.1f);
+        glBegin(GL_QUADS);
+        glVertex3f(-0.5f, -0.5f, -0.5f);
+        glVertex3f(0.5f, -0.5f, -0.5f);
+        glVertex3f(0.5f, 0.5f, -0.5f);
+        glVertex3f(-0.5f, 0.5f, -0.5f);
+        glEnd();
+        glPopMatrix();
+
+        // Bronze buckles
+        glColor3fv(bronzeBuckles);
+        glPushMatrix();
+        glTranslatef(0.3f, 0.3f + i * 0.3f, 0.2f);
+        glScalef(0.1f, 0.1f, 0.05f);
+        GLUquadricObj* buckle = gluNewQuadric();
+        gluCylinder(buckle, 0.5, 0.5, 1.0, 8, 4);
+        gluDeleteQuadric(buckle);
+        glPopMatrix();
+        glColor3fv(richBrownLeather);
+    }
+
+    // Draw decorative studs (4x3 pattern)
+    glColor3f(0.9f, 0.9f, 1.0f); // Bright metallic
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 3; col++) {
+            glPushMatrix();
+            glTranslatef((col - 1) * 0.2f, 0.5f + row * 0.2f, 0.25f);
+            GLUquadricObj* stud = gluNewQuadric();
+            gluSphere(stud, 0.03f, 8, 6);
+            gluDeleteQuadric(stud);
+            glPopMatrix();
+        }
+    }
+
+    // Draw triple ankle rings
+    glColor3fv(metallicArmor);
+    for (int ring = 0; ring < 3; ring++) {
+        glPushMatrix();
+        glTranslatef(0.0f, 0.1f + ring * 0.08f, 0.0f);
+        drawTorus(0.5f, 0.03f, 16, 8); // ringRadius, tubeRadius, numSides, numRings
+        glPopMatrix();
+    }
+
+    // Draw heel spur
+    glColor3fv(metallicArmor);
+    glPushMatrix();
+    glTranslatef(0.0f, -0.1f, -1.5f);
+    glRotatef(45.0f, 1.0f, 0.0f, 0.0f);
+    GLUquadricObj* spur = gluNewQuadric();
+    drawCone(spur, 0.08f, 0.3f, 6, 4);
+    gluDeleteQuadric(spur);
+    glPopMatrix();
+
+    glPopMatrix();
+}
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+    glEnable(GL_COLOR_MATERIAL);
+    
+    // Primary warm light
+    GLfloat lightPos0[] = { 3.0f, 4.0f, 5.0f, 1.0f };
+    GLfloat lightAmbient0[] = { 0.3f, 0.25f, 0.2f, 1.0f };
+    GLfloat lightDiffuse0[] = { 1.0f, 0.9f, 0.7f, 1.0f };
+    GLfloat lightSpecular0[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular0);
+    
+    // Secondary cool fill light
+    GLfloat lightPos1[] = { -2.0f, 3.0f, -2.0f, 1.0f };
+    GLfloat lightAmbient1[] = { 0.1f, 0.15f, 0.2f, 1.0f };
+    GLfloat lightDiffuse1[] = { 0.3f, 0.4f, 0.6f, 1.0f };
+    GLfloat lightSpecular1[] = { 0.5f, 0.6f, 0.8f, 1.0f };
+    
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient1);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse1);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, lightSpecular1);
+    
+    // Enhanced material properties for metallic reflections
+    GLfloat matShininess[] = { 80.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, matShininess);
+    
+    glEnable(GL_NORMALIZE);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+LRESULT WINAPI WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam) 
+        {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            break;
+        case VK_LEFT:
+            rotationY -= 5.0f;
+            break;
+        case VK_RIGHT:
+            rotationY += 5.0f;
+            break;
+        case VK_UP:
+            rotationX -= 5.0f;
+            break;
+        case VK_DOWN:
+            rotationX += 5.0f;
+            break;
+        case 'W':
+            zoom += 0.5f;
+            break;
+        case 'S':
+            zoom -= 0.5f;
+            break;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+//--------------------------------------------------------------------
+
+bool initPixelFormat(HDC hdc)
+{
+    PIXELFORMATDESCRIPTOR pfd;
+    ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+    pfd.cAlphaBits = 8;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 0;
+
+    pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+
+    pfd.iLayerType = PFD_MAIN_PLANE;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+
+    int n = ChoosePixelFormat(hdc, &pfd);
+    return SetPixelFormat(hdc, n, &pfd);
+}
+
+void drawGroundPlane() {
+    glColor3f(0.2f, 0.2f, 0.2f); // Dark surface
+    glPushMatrix();
+    glTranslatef(0.0f, -0.7f, 0.0f);
+    glBegin(GL_QUADS);
+    glVertex3f(-5.0f, 0.0f, -5.0f);
+    glVertex3f(5.0f, 0.0f, -5.0f);
+    glVertex3f(5.0f, 0.0f, 5.0f);
+    glVertex3f(-5.0f, 0.0f, 5.0f);
+    glEnd();
+    glPopMatrix();
+}
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+    // Professional camera angle for optimal boot display
+    glTranslatef(0.0f, -0.5f, zoom);
+    glRotatef(rotationX + 10.0f, 1.0f, 0.0f, 0.0f); // Slight downward angle
+    glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+
+    // Draw ground plane for context
+    drawGroundPlane();
+
+    // Draw left armored boot
+    glPushMatrix();
+    glTranslatef(-1.5f, 0.0f, 0.0f);
+    drawArmoredBoot(true);
+    glPopMatrix();
+
+    // Draw right armored boot
+    glPushMatrix();
+    glTranslatef(1.5f, 0.0f, 0.0f);
+    drawArmoredBoot(false);
+    glPopMatrix();
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSEX wc;
+    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = WindowProcedure;
+    wc.lpszClassName = WINDOW_TITLE;
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+
+    if (!RegisterClassEx(&wc)) return false;
+
+    HWND hWnd = CreateWindow(WINDOW_TITLE, WINDOW_TITLE, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        NULL, NULL, wc.hInstance, NULL);
+
+    HDC hdc = GetDC(hWnd);
+    initPixelFormat(hdc);
+    HGLRC hglrc = wglCreateContext(hdc);
+    if (!wglMakeCurrent(hdc, hglrc)) return false;
+
+    ShowWindow(hWnd, nCmdShow);
+
+    // Initialize OpenGL settings
+    glEnable(GL_DEPTH_TEST);
+    setupLighting();
+
+    // Set up projection matrix
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, 800.0f/600.0f, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+
+    // Set dramatic dark blue background
+    glClearColor(0.1f, 0.1f, 0.3f, 1.0f);
+
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+
+    while (true)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) break;
+
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        display();
+        SwapBuffers(hdc);
+    }
+
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hglrc);
+    ReleaseDC(hWnd, hdc);
+    UnregisterClass(WINDOW_TITLE, wc.hInstance);
+
+    return true;
+}
+
+// Utility: Draw a torus (ring) using triangle strips
+void drawTorus(float ringRadius, float tubeRadius, int numSides, int numRings) {
+    for (int i = 0; i < numRings; ++i) {
+        float theta = (float)i * 2.0f * PI / numRings;
+        float nextTheta = (float)(i + 1) * 2.0f * PI / numRings;
+        glBegin(GL_QUAD_STRIP);
+        for (int j = 0; j <= numSides; ++j) {
+            float phi = (float)j * 2.0f * PI / numSides;
+            float cosPhi = cosf(phi), sinPhi = sinf(phi);
+            float x0 = (ringRadius + tubeRadius * cosPhi) * cosf(theta);
+            float y0 = (ringRadius + tubeRadius * cosPhi) * sinf(theta);
+            float z0 = tubeRadius * sinPhi;
+            float x1 = (ringRadius + tubeRadius * cosPhi) * cosf(nextTheta);
+            float y1 = (ringRadius + tubeRadius * cosPhi) * sinf(nextTheta);
+            float z1 = z0;
+            glNormal3f(cosf(theta) * cosPhi, sinf(theta) * cosPhi, sinPhi);
+            glVertex3f(x0, y0, z0);
+            glNormal3f(cosf(nextTheta) * cosPhi, sinf(nextTheta) * cosPhi, sinPhi);
+            glVertex3f(x1, y1, z1);
+        }
+        glEnd();
+    }
+}
+
+// Utility: Draw a cone using gluCylinder and a disk for the base
+void drawCone(GLUquadric* quad, float base, float height, int slices, int stacks) {
+    gluCylinder(quad, base, 0.0, height, slices, stacks);
+    // Draw base disk
+    glPushMatrix();
+    glRotatef(180.0f, 1, 0, 0);
+    gluDisk(quad, 0.0, base, slices, 1);
+    glPopMatrix();
+}
